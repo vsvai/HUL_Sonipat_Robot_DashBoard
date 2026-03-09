@@ -170,10 +170,10 @@
     </section>
   </main>
   <script>
-    // On localhost use /api (Node proxy); on GitHub Pages use API URL directly (API must allow CORS)
-    const API_BASE = window.ROBOT_DASHBOARD_API || (
-      /localhost|127\.0\.0\.1/.test(location.host) ? '/api' : 'http://65.2.178.186:5174'
-    );
+    // On localhost use /api (Node proxy). On HTTPS (e.g. GitHub Pages) use CORS proxy to avoid mixed content.
+    const IS_LOCALHOST = /localhost|127\.0\.0\.1/.test(location.host);
+    const API_BASE = window.ROBOT_DASHBOARD_API || (IS_LOCALHOST ? '/api' : 'http://65.2.178.186:5174');
+    const CORS_PROXY = 'https://corsproxy.io/?';
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
 
@@ -184,7 +184,12 @@
     let countdownTimer = null;
 
     function api(path) {
-      return (API_BASE || '/api') + path;
+      const url = (API_BASE || '/api') + path;
+      // When page is HTTPS and API is HTTP, use CORS proxy to avoid mixed content block
+      if (location.protocol === 'https:' && url.startsWith('http://')) {
+        return CORS_PROXY + encodeURIComponent(url);
+      }
+      return url;
     }
 
     function parseMacsResponse(text) {
@@ -228,11 +233,11 @@
         el.innerHTML = '<div class="empty-state">No robots found</div>';
         return;
       }
-      el.innerHTML = robots.map((mac, i) => {
+      el.innerHTML = [...robots].reverse().map((mac) => {
         const status = robotStatus[mac];
         const online = status && status.online;
         const active = mac === selectedMac;
-        const label = `Robot ${i + 1} (${mac})`;
+        const label = `Robot ${robots.indexOf(mac) + 1} (${mac})`;
         return `<div class="robot-item ${active ? 'active' : ''}" data-mac="${escapeHtml(mac)}">
           <span class="status-dot ${online ? 'online' : 'offline'}"></span>
           <span class="robot-mac">${escapeHtml(label)}</span>
@@ -268,7 +273,7 @@
         const data = await fetchLogs(mac);
         setRobotOnline(mac, true);
         const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : []);
-        const lines = Array.isArray(logs) ? logs : [logs];
+        const lines = Array.isArray(logs) ? [...logs].reverse() : [logs];
         if (lines.length === 0) {
           content.innerHTML = '<div class="empty-state">No logs yet</div>';
         } else {
