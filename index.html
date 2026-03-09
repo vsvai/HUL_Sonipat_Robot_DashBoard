@@ -185,7 +185,8 @@
     // On localhost use /api (Node proxy). Otherwise use HTTPS API (no mixed content).
     const IS_LOCALHOST = /localhost|127\.0\.0\.1/.test(location.host);
     const API_BASE = window.ROBOT_DASHBOARD_API || (IS_LOCALHOST ? '/api' : 'https://server2.sudoyantra.com');
-    const CORS_PROXY = 'https://corsproxy.io/?';
+    // Use CORS proxy when page is not on localhost so we can read API response (API does not send Access-Control-Allow-Origin)
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
 
@@ -197,7 +198,7 @@
 
     function api(path) {
       const url = (API_BASE || '/api') + path;
-      // Use CORS proxy when calling a different origin (not localhost proxy) so we can read the response (avoids 200-in-red / CORS block)
+      // Always use CORS proxy for remote API so response is readable (API does not send CORS headers)
       if (url.startsWith('http://') || url.startsWith('https://')) {
         return CORS_PROXY + encodeURIComponent(url);
       }
