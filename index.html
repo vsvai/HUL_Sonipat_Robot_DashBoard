@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f6f8fa;
+      --panel: #ffffff;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #656d76;
+      --accent: #2da44e;
+      --accent-dim: #1a7f37;
+      --offline: #afb8c1;
+      --error: #cf222e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .refresh-info {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .refresh-info span { color: var(--accent); }
+    main {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+    aside {
+      width: 280px;
+      min-width: 280px;
+      border-right: 1px solid var(--border);
+      padding: 1rem 0;
+      overflow-y: auto;
+    }
+    .robots-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 0 1rem 0.5rem;
+    }
+    .robot-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .robot-item:hover { background: rgba(0,0,0,0.04); }
+    .robot-item.active {
+      background: rgba(45, 164, 78, 0.12);
+      border-left-color: var(--accent);
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.online {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .status-dot.offline {
+      background: var(--offline);
+    }
+    .robot-mac {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 1rem 1.5rem;
+    }
+    .section-header {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .logs-panel {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 200px;
+    }
+    .logs-title {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .logs-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+    .log-line {
+      padding: 0.2rem 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      word-break: break-all;
+    }
+    .log-line:last-child { border-bottom: none; }
+    .empty-state, .error-state {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .error-state { color: var(--error); }
+    .loading { opacity: 0.7; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Robot Dashboard</h1>
+    <div class="refresh-info">Auto-refresh: <span id="countdown">--</span>s</div>
+  </header>
+  <main>
+    <aside>
+      <div class="robots-title">Robots</div>
+      <div id="robot-list"></div>
+    </aside>
+    <section class="section">
+      <div class="section-header">Latest logs (last 50) — <span id="selected-robot-label">Select a robot</span></div>
+      <div class="logs-panel">
+        <div class="logs-title" id="logs-panel-title">Logs</div>
+        <div class="logs-content" id="logs-content"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    // On localhost use /api (Node proxy); on GitHub Pages use API URL directly (API must allow CORS)
+    const API_BASE = window.ROBOT_DASHBOARD_API || (
+      /localhost|127\.0\.0\.1/.test(location.host) ? '/api' : 'http://65.2.178.186:5174'
+    );
+    const REFRESH_INTERVAL_MS = 10000;
+    const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
+
+    let robots = [];
+    let robotStatus = {}; // mac -> { lastSeen, online }
+    let selectedMac = null;
+    let refreshTimer = null;
+    let countdownTimer = null;
+
+    function api(path) {
+      return (API_BASE || '/api') + path;
+    }
+
+    function parseMacsResponse(text) {
+      const t = text.trim();
+      if (!t) return [];
+      if (t.startsWith('[') || t.startsWith('{')) {
+        try {
+          const data = JSON.parse(t);
+          return Array.isArray(data) ? data : (data.macs || data.robots || []);
+        } catch (_) { /* fall through to text parse */ }
+      }
+      return t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+
+    async function fetchRobots() {
+      const res = await fetch(api('/macs'));
+      if (!res.ok) throw new Error('Failed to load robots');
+      const text = await res.text();
+      const list = parseMacsResponse(text);
+      return list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r));
+    }
+
+    function parseJsonOrText(text) {
+      const t = text.trim();
+      if (t.startsWith('[') || t.startsWith('{')) {
+        try { return JSON.parse(t); } catch (_) { }
+      }
+      return { logs: t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) };
+    }
+
+    async function fetchLogs(mac) {
+      const res = await fetch(api('/view/' + encodeURIComponent(mac)));
+      if (!res.ok) throw new Error('Failed to load logs');
+      const text = await res.text();
+      return parseJsonOrText(text);
+    }
+
+    function renderRobotList() {
+      const el = document.getElementById('robot-list');
+      if (!robots.length) {
+        el.innerHTML = '<div class="empty-state">No robots found</div>';
+        return;
+      }
+      el.innerHTML = robots.map((mac, i) => {
+        const status = robotStatus[mac];
+        const online = status && status.online;
+        const active = mac === selectedMac;
+        const label = `Robot ${i + 1} (${mac})`;
+        return `<div class="robot-item ${active ? 'active' : ''}" data-mac="${escapeHtml(mac)}">
+          <span class="status-dot ${online ? 'online' : 'offline'}"></span>
+          <span class="robot-mac">${escapeHtml(label)}</span>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.robot-item').forEach(node => {
+        node.addEventListener('click', () => selectRobot(node.dataset.mac));
+      });
+    }
+
+    function selectRobot(mac) {
+      selectedMac = mac;
+      const idx = robots.indexOf(mac);
+      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot';
+      document.getElementById('selected-robot-label').textContent = label;
+      renderRobotList();
+      if (mac) loadLogs(mac);
+      else {
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot to view logs</div>';
+      }
+    }
+
+    function setRobotOnline(mac, online) {
+      if (!robotStatus[mac]) robotStatus[mac] = {};
+      robotStatus[mac].lastSeen = Date.now();
+      robotStatus[mac].online = online;
+    }
+
+    async function loadLogs(mac) {
+      const content = document.getElementById('logs-content');
+      content.innerHTML = '<div class="empty-state">Loading…</div>';
+      try {
+        const data = await fetchLogs(mac);
+        setRobotOnline(mac, true);
+        const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : []);
+        const lines = Array.isArray(logs) ? logs : [logs];
+        if (lines.length === 0) {
+          content.innerHTML = '<div class="empty-state">No logs yet</div>';
+        } else {
+          content.innerHTML = lines.map(l => {
+            const text = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
+            const time = l.timestamp ?? l.time ?? '';
+            return `<div class="log-line">${time ? `<span class="text-muted">${time}</span> ` : ''}${escapeHtml(text)}</div>`;
+          }).join('');
+        }
+      } catch (e) {
+        setRobotOnline(mac, false);
+        content.innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
+      }
+      renderRobotList();
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    async function refresh() {
+      try {
+        const macs = await fetchRobots();
+        robots = [...new Set(macs)];
+        robotStatus = robots.reduce((acc, mac) => {
+          if (!acc[mac]) acc[mac] = robotStatus[mac] || {};
+          if (Date.now() - (acc[mac].lastSeen || 0) > ONLINE_THRESHOLD_MS) acc[mac].online = false;
+          return acc;
+        }, {});
+        renderRobotList();
+        if (selectedMac) loadLogs(selectedMac);
+      } catch (e) {
+        document.getElementById('robot-list').innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
+      }
+      startCountdown();
+    }
+
+    function startCountdown() {
+      let sec = REFRESH_INTERVAL_MS / 1000;
+      document.getElementById('countdown').textContent = sec;
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        sec--;
+        document.getElementById('countdown').textContent = Math.max(0, sec);
+        if (sec <= 0) clearInterval(countdownTimer);
+      }, 1000);
+    }
+
+    function startRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refresh();
+      refreshTimer = setInterval(refresh, REFRESH_INTERVAL_MS);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      startRefresh();
+    });
+  </script>
+</body>
+</html>

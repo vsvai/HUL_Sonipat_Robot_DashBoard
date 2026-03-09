@@ -1,0 +1,10 @@
+{
+  "name": "simple-robot-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard for robot list and logs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "main": "server.js"
+}
