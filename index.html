@@ -160,6 +160,43 @@
       word-break: break-all;
     }
     .api-status.error { color: var(--error); border-color: var(--error); }
+    .control-bar {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0 0.75rem;
+      flex-wrap: wrap;
+    }
+    .control-bar.visible { display: flex; }
+    .control-bar button {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--panel);
+      color: var(--text);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .control-bar button:hover:not(:disabled) {
+      background: rgba(0,0,0,0.05);
+      border-color: var(--text-muted);
+    }
+    .control-bar button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .control-bar button.btn-left { border-color: #0969da; color: #0969da; }
+    .control-bar button.btn-right { border-color: #0969da; color: #0969da; }
+    .control-bar button.btn-ota { border-color: #bf8700; color: #9a6700; }
+    .control-feedback {
+      font-size: 0.8rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 4px;
+      max-width: 280px;
+      word-break: break-all;
+    }
+    .control-feedback.success { background: rgba(45, 164, 78, 0.15); color: var(--accent-dim); }
+    .control-feedback.error { background: rgba(207, 34, 46, 0.1); color: var(--error); }
   </style>
 </head>
 <body>
@@ -175,6 +212,12 @@
     </aside>
     <section class="section">
       <div class="section-header">Latest logs (last 50) — <span id="selected-robot-label">Select a robot</span></div>
+      <div id="control-bar" class="control-bar">
+        <button type="button" id="btn-run-left" class="btn-left" title="Trigger start with direction left">← Run Left</button>
+        <button type="button" id="btn-run-right" class="btn-right" title="Trigger start with direction right">Run Right →</button>
+        <button type="button" id="btn-ota" class="btn-ota" title="Flag robot for OTA update">↑ OTA Update</button>
+        <span id="control-feedback" class="control-feedback" aria-live="polite"></span>
+      </div>
       <div class="logs-panel">
         <div class="logs-title" id="logs-panel-title">Logs</div>
         <div class="logs-content" id="logs-content"></div>
@@ -184,6 +227,8 @@
   <script>
     // Always hit the original robot API (server must send CORS headers).
     const API_BASE = window.ROBOT_DASHBOARD_API || 'https://server2.sudoyantra.com';
+    // Port 8000 only for control buttons (start/ota)
+    const API_BASE_CONTROL = window.ROBOT_DASHBOARD_API_CONTROL || (API_BASE);
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
 
@@ -287,11 +332,65 @@
       const idx = robots.indexOf(mac);
       const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot';
       document.getElementById('selected-robot-label').textContent = label;
+      const controlBar = document.getElementById('control-bar');
+      if (controlBar) {
+        controlBar.classList.toggle('visible', !!mac);
+      }
       renderRobotList();
       if (mac) loadLogs(mac);
       else {
         document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot to view logs</div>';
       }
+    }
+
+    function showControlFeedback(msg, isError) {
+      const el = document.getElementById('control-feedback');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'control-feedback' + (isError ? ' error' : ' success');
+      el.style.display = msg ? 'inline-block' : 'none';
+      if (msg) {
+        clearTimeout(window._controlFeedbackTimer);
+        window._controlFeedbackTimer = setTimeout(() => {
+          el.textContent = '';
+          el.style.display = 'none';
+        }, 3500);
+      }
+    }
+
+    async function triggerControl(path, buttonId) {
+      if (!selectedMac) return;
+      const btnLeft = document.getElementById('btn-run-left');
+      const btnRight = document.getElementById('btn-run-right');
+      const btnOta = document.getElementById('btn-ota');
+      const buttons = [btnLeft, btnRight, btnOta];
+      buttons.forEach(b => { if (b) b.disabled = true; });
+      try {
+        const url = api(path);
+        const res = await fetch(url);
+        const text = await res.text();
+        if (res.ok) {
+          showControlFeedback(text.trim() || 'OK', false);
+        } else {
+          showControlFeedback(text.trim() || res.status + ' ' + res.statusText, true);
+        }
+      } catch (e) {
+        showControlFeedback(e.message || String(e), true);
+      } finally {
+        buttons.forEach(b => { if (b) b.disabled = false; });
+      }
+    }
+
+    function setupControlButtons() {
+      document.getElementById('btn-run-left')?.addEventListener('click', () => {
+        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/left', 'btn-run-left');
+      });
+      document.getElementById('btn-run-right')?.addEventListener('click', () => {
+        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/right', 'btn-run-right');
+      });
+      document.getElementById('btn-ota')?.addEventListener('click', () => {
+        triggerControl('/ota/' + encodeURIComponent(selectedMac) + '/set', 'btn-ota');
+      });
     }
 
     function setRobotOnline(mac, online) {
@@ -365,6 +464,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      setupControlButtons();
       startRefresh();
     });
   </script>
