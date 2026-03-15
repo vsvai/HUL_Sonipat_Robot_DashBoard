@@ -49,6 +49,11 @@ const server = http.createServer((req, res) => {
     proxy(req, res, targetPath);
     return;
   }
+  if (p.startsWith('/api-image')) {
+    const targetPath = '/image' + p.slice('/api-image'.length) || '/image/';
+    proxy(req, res, targetPath);
+    return;
+  }
   res.writeHead(404);
   res.end('Not found');
 });
