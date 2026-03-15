@@ -89,6 +89,17 @@
       background: rgba(9, 105, 218, 0.1);
       border-left-color: #0969da;
     }
+    .camera-item-open {
+      flex-shrink: 0;
+      margin-left: auto;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .camera-item-open:hover { background: var(--accent); color: var(--panel); border-color: var(--accent); }
     .status-dot {
       width: 10px;
       height: 10px;
@@ -216,12 +227,41 @@
       min-height: 120px;
       max-height: 320px;
     }
-    .images-panel .images-title {
+    .images-panel .images-title-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
       padding: 0.6rem 1rem;
       border-bottom: 1px solid var(--border);
+    }
+    .images-panel .images-title {
       font-size: 0.9rem;
       font-weight: 600;
     }
+    .images-panel .image-server-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-left: auto;
+    }
+    .images-panel .image-server-row input {
+      width: 200px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .images-panel .image-server-row button {
+      padding: 0.35rem 0.6rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .images-panel .image-server-row button:hover { background: var(--border); }
     .images-panel .images-list-wrap {
       flex: 1;
       overflow-y: auto;
@@ -247,7 +287,18 @@
     .image-row:hover { background: rgba(0,0,0,0.04); }
     .image-row:last-child { border-bottom: none; }
     .image-row-time { color: var(--text); font-weight: 500; }
-    .image-row-filename { color: var(--text-muted); margin-left: 0.5rem; }
+    .image-row-filename { color: var(--text-muted); margin-left: 0.5rem; flex: 1; min-width: 0; }
+    .image-row-open-new {
+      flex-shrink: 0;
+      margin-left: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .image-row-open-new:hover { background: var(--accent); color: var(--panel); border-color: var(--accent); }
     .preview-overlay {
       display: none;
       position: fixed;
@@ -268,9 +319,9 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
     .preview-content img { display: block; max-width: 100%; max-height: 85vh; object-fit: contain; }
-    .preview-close {
-      display: block;
-      width: 100%;
+    .preview-actions { display: flex; gap: 0.5rem; padding: 0; }
+    .preview-close, .preview-open-new {
+      flex: 1;
       padding: 0.5rem 1rem;
       font-family: 'Outfit', sans-serif;
       font-size: 0.9rem;
@@ -278,6 +329,8 @@
       background: var(--border);
       cursor: pointer;
     }
+    .preview-open-new { background: var(--accent); color: var(--panel); }
+    .preview-open-new:hover { filter: brightness(1.1); }
     .preview-close:hover { background: var(--text-muted); color: var(--panel); }
   </style>
 </head>
@@ -307,7 +360,15 @@
         <div class="logs-content" id="logs-content"></div>
       </div>
       <div class="images-panel">
-        <div class="images-title" id="images-panel-title">Images</div>
+        <div class="images-title-row">
+          <span class="images-title" id="images-panel-title">Images</span>
+          <div class="image-server-row">
+            <label for="image-server-input" class="section-header" style="margin:0;font-size:0.7rem;">Image server:</label>
+            <input type="text" id="image-server-input" placeholder="https://server2.sudoyantra.com" title="Base URL only (no /image). Images at {base}/image/{mac}/{filename}.jpg" />
+            <button type="button" id="image-server-apply">Apply</button>
+          </div>
+          <p class="image-server-hint" style="margin:0.25rem 0 0;font-size:0.65rem;color:var(--offline);">Base URL only, e.g. <code>https://server2.sudoyantra.com</code>. Images: <code>{base}/image/2805a503de4c/1773602828.jpg</code></p>
+        </div>
         <div class="images-list-wrap" id="images-list-wrap">
           <div id="images-placeholder" class="images-placeholder">Select a robot to view images</div>
           <div id="images-loading" class="images-loading" style="display: none;">Loading images…</div>
@@ -319,7 +380,10 @@
   <div id="preview-overlay" class="preview-overlay" aria-hidden="true">
     <div class="preview-content">
       <img id="preview-img" alt="Preview" />
-      <button type="button" class="preview-close" id="preview-close">Close</button>
+      <div class="preview-actions">
+        <button type="button" class="preview-open-new" id="preview-open-new" title="Open image in new tab (backup / file system)">Open in new tab</button>
+        <button type="button" class="preview-close" id="preview-close">Close</button>
+      </div>
     </div>
   </div>
   <script>
@@ -343,11 +407,23 @@
       return (API_BASE || '') + path;
     }
 
+    function getImageApiBase() {
+      let base = '';
+      try {
+        const fromStorage = localStorage.getItem('ROBOT_IMAGE_API');
+        if (fromStorage && fromStorage.trim()) base = fromStorage.trim();
+        else if (window.ROBOT_IMAGE_API) base = window.ROBOT_IMAGE_API + '';
+        else base = API_BASE || '';
+      } catch (_) { base = API_BASE || ''; }
+      base = base.replace(/\/$/, '').replace(/\/image\/?$/i, '');
+      return base || (API_BASE || '').replace(/\/$/, '');
+    }
+
     // Use proxy for image directory fetch when cross-origin (avoids CORS)
-    // Set window.ROBOT_IMAGE_API to override (e.g. if /image/ is on another server/port)
     function imageApiBaseForFetch() {
-      if (window.ROBOT_IMAGE_API) return (window.ROBOT_IMAGE_API + '').replace(/\/$/, '') + '/image';
-      const base = (API_BASE || '').replace(/\/$/, '');
+      const base = getImageApiBase();
+      const defaultBase = (API_BASE || '').replace(/\/$/, '');
+      if (base !== defaultBase) return base + '/image';
       try {
         const apiOrigin = new URL(base).origin;
         if (window.location.origin === apiOrigin) return base + '/image';
@@ -357,8 +433,7 @@
 
     // Direct URL for <img src> (images load cross-origin)
     function imageApiBaseForDisplay() {
-      if (window.ROBOT_IMAGE_API) return (window.ROBOT_IMAGE_API + '').replace(/\/$/, '') + '/image';
-      return (API_BASE || '').replace(/\/$/, '') + '/image';
+      return getImageApiBase() + '/image';
     }
 
     function parseDirectoryListing(html, wantFiles) {
@@ -421,10 +496,13 @@
       return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' });
     }
 
+    let currentPreviewImageUrl = '';
+
     function showPreview(imageUrl) {
       const overlay = document.getElementById('preview-overlay');
       const img = document.getElementById('preview-img');
       if (!overlay || !img) return;
+      currentPreviewImageUrl = imageUrl || '';
       img.src = imageUrl;
       overlay.classList.add('visible');
       overlay.setAttribute('aria-hidden', 'false');
@@ -433,6 +511,7 @@
     function hidePreview() {
       const overlay = document.getElementById('preview-overlay');
       const img = document.getElementById('preview-img');
+      currentPreviewImageUrl = '';
       if (overlay) {
         overlay.classList.remove('visible');
         overlay.setAttribute('aria-hidden', 'true');
@@ -556,10 +635,25 @@
         const label = mac.toUpperCase();
         return `<div class="camera-item ${active ? 'active' : ''}" data-camera-mac="${escapeHtml(mac)}">
           <span class="robot-mac">${escapeHtml(label)}</span>
+          <button type="button" class="camera-item-open" data-camera-mac="${escapeHtml(mac)}" title="Open camera images in new tab">New tab</button>
         </div>`;
       }).join('');
       el.querySelectorAll('.camera-item').forEach(node => {
-        node.addEventListener('click', () => selectCamera(node.dataset.cameraMac));
+        node.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('camera-item-open')) selectCamera(node.dataset.cameraMac);
+        });
+      });
+      el.querySelectorAll('.camera-item-open').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const mac = btn.dataset.cameraMac;
+          if (mac) {
+            const base = imageApiBaseForDisplay();
+            const url = base + '/' + encodeURIComponent(mac) + '/';
+            window.open(url, '_blank', 'noopener');
+          }
+        });
       });
     }
 
@@ -636,12 +730,21 @@
             const imgUrl = baseDisplay + '/' + encodeURIComponent(macNorm) + '/' + encodeURIComponent(entry.href);
             return '<div class="image-row" data-url="' + escapeHtml(imgUrl) + '" role="button" tabindex="0">' +
               '<span class="image-row-time">' + escapeHtml(timeStr) + '</span>' +
-              '<span class="image-row-filename">' + escapeHtml(entry.href) + '</span></div>';
+              '<span class="image-row-filename">' + escapeHtml(entry.href) + '</span>' +
+              '<button type="button" class="image-row-open-new" data-url="' + escapeHtml(imgUrl) + '" title="Open in new tab">New tab</button></div>';
           }).join('');
           listEl.querySelectorAll('.image-row').forEach(row => {
             const url = row.dataset.url;
-            row.addEventListener('click', () => showPreview(url));
-            row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPreview(url); } });
+            row.addEventListener('click', (e) => { if (!e.target.classList.contains('image-row-open-new')) showPreview(url); });
+            row.addEventListener('keydown', (e) => { if (e.target.classList.contains('image-row-open-new')) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPreview(url); } });
+          });
+          listEl.querySelectorAll('.image-row-open-new').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const u = btn.getAttribute('data-url');
+              if (u) window.open(u, '_blank', 'noopener');
+            });
           });
         }
         listEl.style.display = 'block';
@@ -799,7 +902,32 @@
     document.addEventListener('DOMContentLoaded', () => {
       setupControlButtons();
       startRefresh();
+      const imageServerInput = document.getElementById('image-server-input');
+      if (imageServerInput) {
+        try {
+          const saved = localStorage.getItem('ROBOT_IMAGE_API');
+          imageServerInput.value = saved && saved.trim() ? saved.trim() : (API_BASE || '').replace(/\/$/, '');
+        } catch (_) {
+          imageServerInput.value = (API_BASE || '').replace(/\/$/, '');
+        }
+      }
+      document.getElementById('image-server-apply')?.addEventListener('click', () => {
+        const input = document.getElementById('image-server-input');
+        if (!input) return;
+        const val = (input.value || '').trim().replace(/\/$/, '');
+        try {
+          if (val) {
+            localStorage.setItem('ROBOT_IMAGE_API', val);
+          } else {
+            localStorage.removeItem('ROBOT_IMAGE_API');
+          }
+        } catch (_) {}
+        updateImagesPanelFromSelection();
+      });
       document.getElementById('preview-close')?.addEventListener('click', hidePreview);
+      document.getElementById('preview-open-new')?.addEventListener('click', () => {
+        if (currentPreviewImageUrl) window.open(currentPreviewImageUrl, '_blank', 'noopener');
+      });
       document.getElementById('preview-overlay')?.addEventListener('click', (e) => {
         if (e.target.id === 'preview-overlay') hidePreview();
       });
