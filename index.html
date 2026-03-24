@@ -207,6 +207,64 @@
     .control-bar button.btn-left { border-color: #0969da; color: #0969da; }
     .control-bar button.btn-right { border-color: #0969da; color: #0969da; }
     .control-bar button.btn-ota { border-color: #bf8700; color: #9a6700; }
+    .control-bar button.btn-move { border-color: #1f6feb; color: #1f6feb; }
+    .control-bar button.btn-stop { border-color: var(--error); color: var(--error); }
+    #move-duration-ms {
+      width: 7.5rem;
+      padding: 0.45rem 0.5rem;
+      font-size: 0.82rem;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    #camera-control-bar {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0 0.75rem;
+      flex-wrap: wrap;
+    }
+    #camera-control-bar.visible { display: flex; }
+    #camera-control-bar label { font-size: 0.85rem; color: var(--text-muted); }
+    #camera-timer-input {
+      width: 4rem;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    #camera-control-bar button.btn-camera-start {
+      border-color: #0969da;
+      color: #0969da;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      background: var(--panel);
+    }
+    .camera-settings {
+      margin: 0.75rem 1rem 0;
+      padding: 0.5rem 0.6rem;
+      font-size: 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    .camera-settings label { display: block; color: var(--text-muted); margin-bottom: 0.2rem; }
+    .camera-settings input {
+      width: 100%;
+      padding: 0.25rem 0.35rem;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 0.35rem;
+    }
+    .camera-settings button { font-size: 0.65rem; padding: 0.2rem 0.45rem; cursor: pointer; }
     .control-feedback {
       font-size: 0.8rem;
       padding: 0.35rem 0.6rem;
@@ -345,15 +403,32 @@
       <div id="robot-list"></div>
       <div class="cameras-title">Cameras</div>
       <div id="camera-list"></div>
+      <div class="camera-settings">
+        <label for="camera-registry-input">Camera API (macs / view)</label>
+        <input type="text" id="camera-registry-input" placeholder="http://server2.sudoyantra.com:5174" title="Registry: /macs, logs: /view/{mac}" />
+        <label for="camera-control-input">Camera control (start)</label>
+        <input type="text" id="camera-control-input" placeholder="http://65.2.178.186:8005" title="GET /start/{MAC}/set/{timer}" />
+        <button type="button" id="camera-endpoints-apply">Apply</button>
+      </div>
       <div id="api-status" class="api-status"></div>
     </aside>
     <section class="section">
-      <div class="section-header">Latest logs (last 50) — <span id="selected-robot-label">Select a robot</span></div>
+      <div class="section-header">Latest logs (last 50) — <span id="selected-robot-label">Select a robot or camera</span></div>
       <div id="control-bar" class="control-bar">
+        <input type="number" id="move-duration-ms" min="1" step="100" value="1500" title="Move duration in milliseconds" />
+        <button type="button" id="btn-move-forward" class="btn-move" title="Move forward for entered milliseconds">Move Forward</button>
+        <button type="button" id="btn-move-backward" class="btn-move" title="Move backward for entered milliseconds">Move Backward</button>
+        <button type="button" id="btn-stop" class="btn-stop" title="Immediate stop">Stop</button>
         <button type="button" id="btn-run-left" class="btn-left" title="Trigger start with direction left">← Run Left</button>
         <button type="button" id="btn-run-right" class="btn-right" title="Trigger start with direction right">Run Right →</button>
         <button type="button" id="btn-ota" class="btn-ota" title="Flag robot for OTA update">↑ OTA Update</button>
         <span id="control-feedback" class="control-feedback" aria-live="polite"></span>
+      </div>
+      <div id="camera-control-bar">
+        <label for="camera-timer-input">Timer (seconds)</label>
+        <input type="number" id="camera-timer-input" min="1" max="86400" value="15" title="Camera capture interval / timer" />
+        <button type="button" id="btn-camera-start" class="btn-camera-start" title="GET /start/{MAC}/set/{timer}">Start camera</button>
+        <span id="camera-control-feedback" class="control-feedback" aria-live="polite"></span>
       </div>
       <div class="logs-panel">
         <div class="logs-title" id="logs-panel-title">Logs</div>
@@ -388,12 +463,36 @@
   </div>
   <script>
     // Always hit the original robot API (server must send CORS headers).
-    const API_BASE = window.ROBOT_DASHBOARD_API || 'https://server2.sudoyantra.com';
-    // Port 8000 only for control buttons (start/ota)
-    const API_BASE_CONTROL = window.ROBOT_DASHBOARD_API_CONTROL || (API_BASE);
+    const API_BASE = 'https://server2.sudoyantra.com';
+    // Port 8000 for robot control endpoints (/move, /stop, /start, /ota)
+    const API_BASE_CONTROL = window.ROBOT_DASHBOARD_API_CONTROL || 'http://server2.sudoyantra.com:8000';
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
-    const HARDCODED_CAMERAS = ['2805a503de4c'];
+
+    function getCameraRegistryBase() {
+      
+      return 'http://server2.sudoyantra.com/';
+    }
+
+    function getCameraControlBase() {
+      try {
+        const fromStorage = localStorage.getItem('ROBOT_CAMERA_CONTROL');
+        if (fromStorage && fromStorage.trim()) return fromStorage.trim().replace(/\/$/, '');
+      } catch (_) {}
+      if (window.ROBOT_DASHBOARD_CAMERA_CONTROL) return String(window.ROBOT_DASHBOARD_CAMERA_CONTROL).replace(/\/$/, '');
+      try {
+        const h = window.location.hostname;
+        const p = window.location.port;
+        if ((h === 'localhost' || h === '127.0.0.1') && p === '3000') {
+          return window.location.origin.replace(/\/$/, '') + '/api-camera-control';
+        }
+      } catch (_) {}
+      return 'http://65.2.178.186:8005';
+    }
+
+    function cameraRegistryApi(path) {
+      return getCameraRegistryBase() + path;
+    }
 
     let robots = [];
     let robotStatus = {}; // mac -> { lastSeen, online }
@@ -405,6 +504,9 @@
 
     function api(path) {
       return (API_BASE || '') + path;
+    }
+    function apiControl(path) {
+      return (API_BASE_CONTROL || '') + path;
     }
 
     function getImageApiBase() {
@@ -538,20 +640,31 @@
       el.className = 'api-status' + (isError ? ' error' : '');
     }
 
+    /** Cameras from registry API (same pattern as robots: /macs), fallback to image directory listing */
     async function fetchCameraMacs() {
+      const url = cameraRegistryApi('camera/macs');
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        if (res.ok) {
+          const list = parseMacsResponse(text);
+          const macs = list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
+          if (macs.length) return macs.map(m => String(m).toLowerCase());
+        }
+      } catch (_) {}
       const directUrl = (API_BASE || '').replace(/\/$/, '') + '/image/';
       const proxyUrl = imageApiBaseForFetch() + '/';
       const urlsToTry = [];
       if (proxyUrl.startsWith('http')) urlsToTry.push(proxyUrl);
       if (directUrl.startsWith('http') && !urlsToTry.includes(directUrl)) urlsToTry.push(directUrl);
-      for (const url of urlsToTry) {
+      for (const u of urlsToTry) {
         try {
-          const res = await fetch(url);
+          const res = await fetch(u);
           const html = await res.text();
           if (!res.ok) continue;
           const entries = parseDirectoryListing(html, false);
           const macs = entries.map(e => (e.href || e.text || '').trim()).filter(Boolean);
-          if (macs.length) return macs;
+          if (macs.length) return macs.map(m => m.toLowerCase());
         } catch (_) {}
       }
       return [];
@@ -589,8 +702,10 @@
       return { logs: t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) };
     }
 
-    async function fetchLogs(mac) {
-      const url = api('/view/' + encodeURIComponent(mac));
+    async function fetchLogs(mac, isCamera) {
+      const url = isCamera
+        ? cameraRegistryApi('/view/' + encodeURIComponent(mac))
+        : api('/view/' + encodeURIComponent(mac));
       try {
         const res = await fetch(url);
         const text = await res.text();
@@ -658,25 +773,41 @@
     }
 
     function selectCamera(mac) {
+      selectedMac = null;
       selectedCameraMac = mac || null;
+      renderRobotList();
+      const label = mac ? `Camera ${mac.toUpperCase()}` : 'Select a robot or camera';
+      document.getElementById('selected-robot-label').textContent = label;
+      const controlBar = document.getElementById('control-bar');
+      const cameraBar = document.getElementById('camera-control-bar');
+      if (controlBar) controlBar.classList.remove('visible');
+      if (cameraBar) cameraBar.classList.toggle('visible', !!mac);
       renderCameraList();
       updateImagesPanelFromSelection();
+      if (mac) loadLogs(mac, true);
+      else {
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot or camera to view logs</div>';
+      }
     }
 
     function selectRobot(mac) {
+      selectedCameraMac = null;
       selectedMac = mac;
       const idx = robots.indexOf(mac);
-      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot';
+      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot or camera';
       document.getElementById('selected-robot-label').textContent = label;
       const controlBar = document.getElementById('control-bar');
+      const cameraBar = document.getElementById('camera-control-bar');
       if (controlBar) {
         controlBar.classList.toggle('visible', !!mac);
       }
+      if (cameraBar) cameraBar.classList.remove('visible');
       updateImagesPanelFromSelection();
       renderRobotList();
-      if (mac) loadLogs(mac);
+      renderCameraList();
+      if (mac) loadLogs(mac, false);
       else {
-        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot to view logs</div>';
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot or camera to view logs</div>';
       }
     }
 
@@ -793,13 +924,17 @@
 
     async function triggerControl(path, buttonId) {
       if (!selectedMac) return;
+      void buttonId;
       const btnLeft = document.getElementById('btn-run-left');
       const btnRight = document.getElementById('btn-run-right');
       const btnOta = document.getElementById('btn-ota');
-      const buttons = [btnLeft, btnRight, btnOta];
+      const btnMoveForward = document.getElementById('btn-move-forward');
+      const btnMoveBackward = document.getElementById('btn-move-backward');
+      const btnStop = document.getElementById('btn-stop');
+      const buttons = [btnLeft, btnRight, btnOta, btnMoveForward, btnMoveBackward, btnStop];
       buttons.forEach(b => { if (b) b.disabled = true; });
       try {
-        const url = api(path);
+        const url = apiControl(path);
         const res = await fetch(url);
         const text = await res.text();
         if (res.ok) {
@@ -815,6 +950,26 @@
     }
 
     function setupControlButtons() {
+      const getMoveMs = () => {
+        const input = document.getElementById('move-duration-ms');
+        const raw = input ? input.value : '1500';
+        const ms = parseInt(raw, 10);
+        if (!Number.isFinite(ms) || ms < 1) return null;
+        return ms;
+      };
+      document.getElementById('btn-move-forward')?.addEventListener('click', () => {
+        const ms = getMoveMs();
+        if (!ms) return showControlFeedback('Enter valid move time in ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/forward/' + ms, 'btn-move-forward');
+      });
+      document.getElementById('btn-move-backward')?.addEventListener('click', () => {
+        const ms = getMoveMs();
+        if (!ms) return showControlFeedback('Enter valid move time in ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/backward/' + ms, 'btn-move-backward');
+      });
+      document.getElementById('btn-stop')?.addEventListener('click', () => {
+        triggerControl('/stop/' + encodeURIComponent(selectedMac), 'btn-stop');
+      });
       document.getElementById('btn-run-left')?.addEventListener('click', () => {
         triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/left', 'btn-run-left');
       });
@@ -826,18 +981,66 @@
       });
     }
 
+    function showCameraControlFeedback(msg, isError) {
+      const el = document.getElementById('camera-control-feedback');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'control-feedback' + (isError ? ' error' : ' success');
+      el.style.display = msg ? 'inline-block' : 'none';
+      if (msg) {
+        clearTimeout(window._cameraControlFeedbackTimer);
+        window._cameraControlFeedbackTimer = setTimeout(() => {
+          el.textContent = '';
+          el.style.display = 'none';
+        }, 3500);
+      }
+    }
+
+    async function triggerCameraStart() {
+      if (!selectedCameraMac) return;
+      const btn = document.getElementById('btn-camera-start');
+      const input = document.getElementById('camera-timer-input');
+      const timerRaw = input ? input.value : '15';
+      const timer = parseInt(timerRaw, 10);
+      if (!Number.isFinite(timer) || timer < 1) {
+        showCameraControlFeedback('Enter a valid timer (seconds)', true);
+        return;
+      }
+      const mac = selectedCameraMac.toUpperCase();
+      const base = getCameraControlBase();
+      const url = base + '/start/' + encodeURIComponent(mac) + '/set/' + timer;
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        if (res.ok) {
+          showCameraControlFeedback(text.trim() || 'OK', false);
+        } else {
+          showCameraControlFeedback(text.trim() || res.status + ' ' + res.statusText, true);
+        }
+      } catch (e) {
+        showCameraControlFeedback(e.message || String(e), true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function setupCameraControlButtons() {
+      document.getElementById('btn-camera-start')?.addEventListener('click', triggerCameraStart);
+    }
+
     function setRobotOnline(mac, online) {
       if (!robotStatus[mac]) robotStatus[mac] = {};
       robotStatus[mac].lastSeen = Date.now();
       robotStatus[mac].online = online;
     }
 
-    async function loadLogs(mac) {
+    async function loadLogs(mac, isCamera) {
       const content = document.getElementById('logs-content');
       content.innerHTML = '<div class="empty-state">Loading…</div>';
       try {
-        const data = await fetchLogs(mac);
-        setRobotOnline(mac, true);
+        const data = await fetchLogs(mac, !!isCamera);
+        if (!isCamera) setRobotOnline(mac, true);
         const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : []);
         const lines = Array.isArray(logs) ? [...logs].reverse() : [logs];
         if (lines.length === 0) {
@@ -850,7 +1053,7 @@
           }).join('');
         }
       } catch (e) {
-        setRobotOnline(mac, false);
+        if (!isCamera) setRobotOnline(mac, false);
         content.innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
       }
       renderRobotList();
@@ -873,9 +1076,10 @@
         }, {});
         renderRobotList();
         const fetched = await fetchCameraMacs();
-        cameras = fetched.length ? [...new Set([...HARDCODED_CAMERAS, ...fetched])] : HARDCODED_CAMERAS.slice();
+        cameras = fetched.length ? [...new Set([ ...fetched])]:[];
         renderCameraList();
-        if (selectedMac) loadLogs(selectedMac);
+        if (selectedMac) loadLogs(selectedMac, false);
+        else if (selectedCameraMac) loadLogs(selectedCameraMac, true);
       } catch (e) {
         document.getElementById('robot-list').innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
       }
@@ -901,6 +1105,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setupControlButtons();
+      setupCameraControlButtons();
       startRefresh();
       const imageServerInput = document.getElementById('image-server-input');
       if (imageServerInput) {
@@ -930,6 +1135,38 @@
       });
       document.getElementById('preview-overlay')?.addEventListener('click', (e) => {
         if (e.target.id === 'preview-overlay') hidePreview();
+      });
+      const regIn = document.getElementById('camera-registry-input');
+      const ctlIn = document.getElementById('camera-control-input');
+      const timerIn = document.getElementById('camera-timer-input');
+      if (regIn) {
+        try {
+          regIn.value = localStorage.getItem('ROBOT_CAMERA_API') || getCameraRegistryBase();
+        } catch (_) { regIn.value = getCameraRegistryBase(); }
+      }
+      if (ctlIn) {
+        try {
+          ctlIn.value = localStorage.getItem('ROBOT_CAMERA_CONTROL') || getCameraControlBase();
+        } catch (_) { ctlIn.value = getCameraControlBase(); }
+      }
+      if (timerIn) {
+        try {
+          const t = localStorage.getItem('ROBOT_CAMERA_TIMER');
+          if (t && /^\d+$/.test(t)) timerIn.value = t;
+        } catch (_) {}
+      }
+      document.getElementById('camera-endpoints-apply')?.addEventListener('click', () => {
+        const r = (document.getElementById('camera-registry-input')?.value || '').trim().replace(/\/$/, '');
+        const c = (document.getElementById('camera-control-input')?.value || '').trim().replace(/\/$/, '');
+        try {
+          if (r) localStorage.setItem('ROBOT_CAMERA_API', r); else localStorage.removeItem('ROBOT_CAMERA_API');
+          if (c) localStorage.setItem('ROBOT_CAMERA_CONTROL', c); else localStorage.removeItem('ROBOT_CAMERA_CONTROL');
+        } catch (_) {}
+        refresh();
+      });
+      document.getElementById('camera-timer-input')?.addEventListener('change', () => {
+        const v = document.getElementById('camera-timer-input')?.value;
+        try { if (v && /^\d+$/.test(v)) localStorage.setItem('ROBOT_CAMERA_TIMER', v); } catch (_) {}
       });
     });
   </script>
