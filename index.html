@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f8fa" />
   <title>Robot Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,32 +19,40 @@
       --accent-dim: #1a7f37;
       --offline: #afb8c1;
       --error: #cf222e;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       font-family: 'Outfit', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
+      -webkit-tap-highlight-color: rgba(45, 164, 78, 0.15);
     }
     header {
-      padding: 1rem 1.5rem;
+      padding: calc(0.75rem + var(--safe-top)) 1rem 0.75rem;
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 0.5rem;
+      background: var(--panel);
     }
     h1 {
-      font-size: 1.35rem;
+      font-size: clamp(1.1rem, 4vw, 1.35rem);
       font-weight: 700;
       letter-spacing: -0.02em;
     }
     .refresh-info {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
     }
     .refresh-info span { color: var(--accent); }
@@ -51,55 +60,40 @@
       flex: 1;
       display: flex;
       min-height: 0;
+      flex-direction: row;
     }
     aside {
       width: 280px;
-      min-width: 280px;
+      min-width: 240px;
       border-right: 1px solid var(--border);
-      padding: 1rem 0;
+      padding: 0.75rem 0;
       overflow-y: auto;
+      background: var(--panel);
     }
-    .robots-title,
-    .cameras-title {
-      font-size: 0.75rem;
+    .robots-title {
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-muted);
       padding: 0 1rem 0.5rem;
     }
-    .cameras-title { margin-top: 1rem; }
-    .robot-item,
-    .camera-item {
+    .robot-item {
       display: flex;
       align-items: center;
       gap: 0.6rem;
-      padding: 0.6rem 1rem;
+      padding: 0.75rem 1rem;
+      min-height: 48px;
       cursor: pointer;
       border-left: 3px solid transparent;
       transition: background 0.15s, border-color 0.15s;
     }
-    .robot-item:hover,
-    .camera-item:hover { background: rgba(0,0,0,0.04); }
+    .robot-item:active { background: rgba(0,0,0,0.06); }
+    .robot-item:hover { background: rgba(0,0,0,0.04); }
     .robot-item.active {
       background: rgba(45, 164, 78, 0.12);
       border-left-color: var(--accent);
     }
-    .camera-item.active {
-      background: rgba(9, 105, 218, 0.1);
-      border-left-color: #0969da;
-    }
-    .camera-item-open {
-      flex-shrink: 0;
-      margin-left: auto;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.7rem;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .camera-item-open:hover { background: var(--accent); color: var(--panel); border-color: var(--accent); }
     .status-dot {
       width: 10px;
       height: 10px;
@@ -110,12 +104,10 @@
       background: var(--accent);
       box-shadow: 0 0 8px var(--accent);
     }
-    .status-dot.offline {
-      background: var(--offline);
-    }
+    .status-dot.offline { background: var(--offline); }
     .robot-mac {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
+      font-size: clamp(0.8rem, 2.8vw, 0.9rem);
       font-weight: 500;
     }
     .section {
@@ -123,26 +115,30 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1rem 1rem;
+      padding-bottom: max(1rem, var(--safe-bottom));
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
     }
     .section-header {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--text-muted);
       margin-bottom: 0.5rem;
+      line-height: 1.35;
     }
     .logs-panel {
       flex: 1;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       min-height: 200px;
     }
     .logs-title {
-      padding: 0.6rem 1rem;
+      padding: 0.65rem 1rem;
       border-bottom: 1px solid var(--border);
       font-size: 0.9rem;
       font-weight: 600;
@@ -152,53 +148,55 @@
       overflow-y: auto;
       padding: 0.75rem 1rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
+      font-size: clamp(0.72rem, 2.5vw, 0.8rem);
       line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
     }
     .log-line {
-      padding: 0.2rem 0;
+      padding: 0.25rem 0;
       border-bottom: 1px solid rgba(0,0,0,0.06);
-      word-break: break-all;
+      word-break: break-word;
     }
     .log-line:last-child { border-bottom: none; }
+    .log-line .text-muted { color: var(--text-muted); }
     .empty-state, .error-state {
-      padding: 2rem;
+      padding: 1.5rem 1rem;
       text-align: center;
       color: var(--text-muted);
     }
     .error-state { color: var(--error); }
-    .loading { opacity: 0.7; pointer-events: none; }
     .api-status {
-      margin: 0.75rem 1rem;
+      margin: 0.5rem 1rem 0;
       padding: 0.5rem 0.6rem;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
-      background: var(--panel);
+      background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      word-break: break-all;
+      border-radius: 8px;
+      word-break: break-word;
     }
     .api-status.error { color: var(--error); border-color: var(--error); }
     .control-bar {
       display: none;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 0 0.75rem;
+      gap: 0.5rem;
+      padding: 0 0 0.65rem;
       flex-wrap: wrap;
     }
     .control-bar.visible { display: flex; }
     .control-bar button {
       font-family: 'Outfit', sans-serif;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 600;
-      padding: 0.5rem 1rem;
+      padding: 0.65rem 0.85rem;
+      min-height: 44px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
       background: var(--panel);
       color: var(--text);
-      transition: background 0.15s, border-color 0.15s;
+      touch-action: manipulation;
     }
+    .control-bar button:active:not(:disabled) { transform: scale(0.98); }
     .control-bar button:hover:not(:disabled) {
       background: rgba(0,0,0,0.05);
       border-color: var(--text-muted);
@@ -210,415 +208,103 @@
     .control-bar button.btn-move { border-color: #1f6feb; color: #1f6feb; }
     .control-bar button.btn-stop { border-color: var(--error); color: var(--error); }
     #move-duration-ms {
-      width: 7.5rem;
-      padding: 0.45rem 0.5rem;
-      font-size: 0.82rem;
-      font-family: 'JetBrains Mono', monospace;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel);
-    }
-    #camera-control-bar {
-      display: none;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 0 0.75rem;
-      flex-wrap: wrap;
-    }
-    #camera-control-bar.visible { display: flex; }
-    #camera-control-bar label { font-size: 0.85rem; color: var(--text-muted); }
-    #camera-timer-input {
-      width: 4rem;
-      padding: 0.4rem 0.5rem;
+      width: 6.5rem;
+      max-width: 100%;
+      padding: 0.5rem 0.5rem;
+      min-height: 44px;
       font-size: 0.85rem;
       font-family: 'JetBrains Mono', monospace;
       border: 1px solid var(--border);
-      border-radius: 6px;
-    }
-    #camera-control-bar button.btn-camera-start {
-      border-color: #0969da;
-      color: #0969da;
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
+      border-radius: 8px;
       background: var(--panel);
     }
-    .camera-settings {
-      margin: 0.75rem 1rem 0;
-      padding: 0.5rem 0.6rem;
-      font-size: 0.7rem;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--panel);
-    }
-    .camera-settings label { display: block; color: var(--text-muted); margin-bottom: 0.2rem; }
-    .camera-settings input {
-      width: 100%;
-      padding: 0.25rem 0.35rem;
-      font-size: 0.7rem;
-      font-family: 'JetBrains Mono', monospace;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      margin-bottom: 0.35rem;
-    }
-    .camera-settings button { font-size: 0.65rem; padding: 0.2rem 0.45rem; cursor: pointer; }
     .control-feedback {
-      font-size: 0.8rem;
-      padding: 0.35rem 0.6rem;
-      border-radius: 4px;
-      max-width: 280px;
-      word-break: break-all;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      width: 100%;
+      flex-basis: 100%;
+      word-break: break-word;
     }
     .control-feedback.success { background: rgba(45, 164, 78, 0.15); color: var(--accent-dim); }
     .control-feedback.error { background: rgba(207, 34, 46, 0.1); color: var(--error); }
-    .images-panel {
-      margin-top: 1rem;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 120px;
-      max-height: 320px;
+
+    @media (max-width: 768px) {
+      main { flex-direction: column; }
+      aside {
+        width: 100%;
+        min-width: 0;
+        max-height: min(42vh, 320px);
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .section { padding-top: 0.5rem; }
+      .control-bar button {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: calc(50% - 0.25rem);
+      }
+      #move-duration-ms {
+        width: 100%;
+        flex: 1 1 100%;
+      }
+      .logs-panel { min-height: 35vh; }
     }
-    .images-panel .images-title-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 0.6rem 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .images-panel .images-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .images-panel .image-server-row {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      margin-left: auto;
-    }
-    .images-panel .image-server-row input {
-      width: 200px;
-      padding: 0.35rem 0.5rem;
-      font-size: 0.75rem;
-      font-family: 'JetBrains Mono', monospace;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-    }
-    .images-panel .image-server-row button {
-      padding: 0.35rem 0.6rem;
-      font-size: 0.75rem;
-      cursor: pointer;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-    }
-    .images-panel .image-server-row button:hover { background: var(--border); }
-    .images-panel .images-list-wrap {
-      flex: 1;
-      overflow-y: auto;
-      min-height: 80px;
-    }
-    .images-panel .images-placeholder,
-    .images-panel .images-loading {
-      padding: 1.25rem;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-    .image-row {
-      display: flex;
-      align-items: center;
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
-      cursor: pointer;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      transition: background 0.15s;
-    }
-    .image-row:hover { background: rgba(0,0,0,0.04); }
-    .image-row:last-child { border-bottom: none; }
-    .image-row-time { color: var(--text); font-weight: 500; }
-    .image-row-filename { color: var(--text-muted); margin-left: 0.5rem; flex: 1; min-width: 0; }
-    .image-row-open-new {
-      flex-shrink: 0;
-      margin-left: 0.5rem;
-      padding: 0.25rem 0.5rem;
-      font-size: 0.7rem;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    .image-row-open-new:hover { background: var(--accent); color: var(--panel); border-color: var(--accent); }
-    .preview-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .preview-overlay.visible { display: flex; }
-    .preview-content {
-      max-width: 95vw;
-      max-height: 90vh;
-      background: var(--panel);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    .preview-content img { display: block; max-width: 100%; max-height: 85vh; object-fit: contain; }
-    .preview-actions { display: flex; gap: 0.5rem; padding: 0; }
-    .preview-close, .preview-open-new {
-      flex: 1;
-      padding: 0.5rem 1rem;
-      font-family: 'Outfit', sans-serif;
-      font-size: 0.9rem;
-      border: none;
-      background: var(--border);
-      cursor: pointer;
-    }
-    .preview-open-new { background: var(--accent); color: var(--panel); }
-    .preview-open-new:hover { filter: brightness(1.1); }
-    .preview-close:hover { background: var(--text-muted); color: var(--panel); }
   </style>
 </head>
 <body>
   <header>
     <h1>Robot Dashboard</h1>
-    <div class="refresh-info">Auto-refresh: <span id="countdown">--</span>s</div>
+    <div class="refresh-info">Refresh: <span id="countdown">--</span>s</div>
   </header>
   <main>
     <aside>
       <div class="robots-title">Robots</div>
       <div id="robot-list"></div>
-      <div class="cameras-title">Cameras</div>
-      <div id="camera-list"></div>
-      <div class="camera-settings">
-        <label for="camera-registry-input">Camera API (macs / view)</label>
-        <input type="text" id="camera-registry-input" placeholder="http://server2.sudoyantra.com:5174" title="Registry: /macs, logs: /view/{mac}" />
-        <label for="camera-control-input">Camera control (start)</label>
-        <input type="text" id="camera-control-input" placeholder="http://65.2.178.186:8005" title="GET /start/{MAC}/set/{timer}" />
-        <button type="button" id="camera-endpoints-apply">Apply</button>
-      </div>
       <div id="api-status" class="api-status"></div>
     </aside>
     <section class="section">
-      <div class="section-header">Latest logs (last 50) — <span id="selected-robot-label">Select a robot or camera</span></div>
+      <div class="section-header">Latest logs — <span id="selected-robot-label">Select a robot</span></div>
       <div id="control-bar" class="control-bar">
-        <input type="number" id="move-duration-ms" min="1" step="100" value="1500" title="Move duration in milliseconds" />
-        <button type="button" id="btn-move-forward" class="btn-move" title="Move forward for entered milliseconds">Move Forward</button>
-        <button type="button" id="btn-move-backward" class="btn-move" title="Move backward for entered milliseconds">Move Backward</button>
-        <button type="button" id="btn-stop" class="btn-stop" title="Immediate stop">Stop</button>
-        <button type="button" id="btn-run-left" class="btn-left" title="Trigger start with direction left">← Run Left</button>
-        <button type="button" id="btn-run-right" class="btn-right" title="Trigger start with direction right">Run Right →</button>
-        <button type="button" id="btn-ota" class="btn-ota" title="Flag robot for OTA update">↑ OTA Update</button>
+        <input type="number" id="move-duration-ms" min="1" step="100" value="1500" inputmode="numeric" title="Move duration (ms)" />
+        <button type="button" id="btn-move-forward" class="btn-move">Forward</button>
+        <button type="button" id="btn-move-backward" class="btn-move">Backward</button>
+        <button type="button" id="btn-stop" class="btn-stop">Stop</button>
+        <button type="button" id="btn-run-left" class="btn-left">← Left</button>
+        <button type="button" id="btn-run-right" class="btn-right">Right →</button>
+        <button type="button" id="btn-ota" class="btn-ota">OTA</button>
         <span id="control-feedback" class="control-feedback" aria-live="polite"></span>
       </div>
-      <div id="camera-control-bar">
-        <label for="camera-timer-input">Timer (seconds)</label>
-        <input type="number" id="camera-timer-input" min="1" max="86400" value="15" title="Camera capture interval / timer" />
-        <button type="button" id="btn-camera-start" class="btn-camera-start" title="GET /start/{MAC}/set/{timer}">Start camera</button>
-        <span id="camera-control-feedback" class="control-feedback" aria-live="polite"></span>
-      </div>
       <div class="logs-panel">
-        <div class="logs-title" id="logs-panel-title">Logs</div>
+        <div class="logs-title">Logs</div>
         <div class="logs-content" id="logs-content"></div>
-      </div>
-      <div class="images-panel">
-        <div class="images-title-row">
-          <span class="images-title" id="images-panel-title">Images</span>
-          <div class="image-server-row">
-            <label for="image-server-input" class="section-header" style="margin:0;font-size:0.7rem;">Image server:</label>
-            <input type="text" id="image-server-input" placeholder="https://server2.sudoyantra.com" title="Base URL only (no /image). Images at {base}/image/{mac}/{filename}.jpg" />
-            <button type="button" id="image-server-apply">Apply</button>
-          </div>
-          <p class="image-server-hint" style="margin:0.25rem 0 0;font-size:0.65rem;color:var(--offline);">Base URL only, e.g. <code>https://server2.sudoyantra.com</code>. Images: <code>{base}/image/2805a503de4c/1773602828.jpg</code></p>
-        </div>
-        <div class="images-list-wrap" id="images-list-wrap">
-          <div id="images-placeholder" class="images-placeholder">Select a robot to view images</div>
-          <div id="images-loading" class="images-loading" style="display: none;">Loading images…</div>
-          <div id="images-list" style="display: none;"></div>
-        </div>
       </div>
     </section>
   </main>
-  <div id="preview-overlay" class="preview-overlay" aria-hidden="true">
-    <div class="preview-content">
-      <img id="preview-img" alt="Preview" />
-      <div class="preview-actions">
-        <button type="button" class="preview-open-new" id="preview-open-new" title="Open image in new tab (backup / file system)">Open in new tab</button>
-        <button type="button" class="preview-close" id="preview-close">Close</button>
-      </div>
-    </div>
-  </div>
   <script>
-    // Always hit the original robot API (server must send CORS headers).
     const API_BASE = 'https://server2.sudoyantra.com';
-    // Port 8000 for robot control endpoints (/move, /stop, /start, /ota)
-    const API_BASE_CONTROL = window.ROBOT_DASHBOARD_API_CONTROL || 'http://server2.sudoyantra.com:8000';
+    const API_BASE_CONTROL = (window.ROBOT_DASHBOARD_API_CONTROL || 'https://server2.sudoyantra.com/api').replace(/\/$/, '');
     const REFRESH_INTERVAL_MS = 10000;
-    const ONLINE_THRESHOLD_MS = 120000; // 2 min = online
-
-    function getCameraRegistryBase() {
-      
-      return 'http://server2.sudoyantra.com/';
-    }
-
-    function getCameraControlBase() {
-      try {
-        const fromStorage = localStorage.getItem('ROBOT_CAMERA_CONTROL');
-        if (fromStorage && fromStorage.trim()) return fromStorage.trim().replace(/\/$/, '');
-      } catch (_) {}
-      if (window.ROBOT_DASHBOARD_CAMERA_CONTROL) return String(window.ROBOT_DASHBOARD_CAMERA_CONTROL).replace(/\/$/, '');
-      try {
-        const h = window.location.hostname;
-        const p = window.location.port;
-        if ((h === 'localhost' || h === '127.0.0.1') && p === '3000') {
-          return window.location.origin.replace(/\/$/, '') + '/api-camera-control';
-        }
-      } catch (_) {}
-      return 'http://65.2.178.186:8005';
-    }
-
-    function cameraRegistryApi(path) {
-      return getCameraRegistryBase() + path;
-    }
+    const ONLINE_THRESHOLD_MS = 120000;
+    const FETCH_TIMEOUT_MS = 15000;
 
     let robots = [];
-    let robotStatus = {}; // mac -> { lastSeen, online }
+    let robotStatus = {};
     let selectedMac = null;
-    let cameras = [];     // camera MACs from /image/
-    let selectedCameraMac = null;
     let refreshTimer = null;
     let countdownTimer = null;
 
     function api(path) {
-      return (API_BASE || '') + path;
+      return API_BASE + (path.startsWith('/') ? path : '/' + path);
     }
     function apiControl(path) {
-      return (API_BASE_CONTROL || '') + path;
+      const p = path.startsWith('/') ? path : '/' + path;
+      return API_BASE_CONTROL + p;
     }
 
-    function getImageApiBase() {
-      let base = '';
-      try {
-        const fromStorage = localStorage.getItem('ROBOT_IMAGE_API');
-        if (fromStorage && fromStorage.trim()) base = fromStorage.trim();
-        else if (window.ROBOT_IMAGE_API) base = window.ROBOT_IMAGE_API + '';
-        else base = API_BASE || '';
-      } catch (_) { base = API_BASE || ''; }
-      base = base.replace(/\/$/, '').replace(/\/image\/?$/i, '');
-      return base || (API_BASE || '').replace(/\/$/, '');
-    }
-
-    // Use proxy for image directory fetch when cross-origin (avoids CORS)
-    function imageApiBaseForFetch() {
-      const base = getImageApiBase();
-      const defaultBase = (API_BASE || '').replace(/\/$/, '');
-      if (base !== defaultBase) return base + '/image';
-      try {
-        const apiOrigin = new URL(base).origin;
-        if (window.location.origin === apiOrigin) return base + '/image';
-      } catch (_) {}
-      return window.location.origin + '/api-image';
-    }
-
-    // Direct URL for <img src> (images load cross-origin)
-    function imageApiBaseForDisplay() {
-      return getImageApiBase() + '/image';
-    }
-
-    function parseDirectoryListing(html, wantFiles) {
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const links = doc.querySelectorAll('a[href]');
-      const out = [];
-      const imageExt = /\.(jpe?g|png|gif|webp|bmp)$/i;
-      for (const a of links) {
-        let href = (a.getAttribute('href') || '').trim();
-        const text = (a.textContent || '').trim();
-        if (!href || href === '../' || href === '..') continue;
-        if (wantFiles) {
-          if (!imageExt.test(href)) continue;
-          out.push({ href: href.replace(/^\//, ''), text: text || href });
-        } else {
-          if (!href.endsWith('/')) continue;
-          const dirName = href.replace(/\/$/, '').split('/').pop() || href.replace(/\/$/, '');
-          out.push({ href: dirName, text: (text || dirName).replace(/\/$/, '') });
-        }
-      }
-      // Fallback: directory listing may use different HTML; look for MAC-like dirs (12 hex chars)
-      if (!wantFiles && out.length === 0 && html) {
-        const macDirRegex = /([0-9a-fA-F]{12})\/?/g;
-        const seen = new Set();
-        let match;
-        while ((match = macDirRegex.exec(html)) !== null) {
-          const mac = match[1].toLowerCase();
-          if (!seen.has(mac)) {
-            seen.add(mac);
-            out.push({ href: mac, text: mac });
-          }
-        }
-      }
-      return out;
-    }
-
-    function parseTimestampFromFilename(filename) {
-      const m = filename.match(/(\d{4})[-_]?(\d{2})[-_]?(\d{2})[-_]?(\d{2})[-_]?(\d{2})[-_]?(\d{2})/);
-      if (m) {
-        const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), parseInt(m[4],10), parseInt(m[5],10), parseInt(m[6],10));
-        return d.getTime();
-      }
-      const m2 = filename.match(/(\d{14})/);
-      if (m2) {
-        const s = m2[1];
-        const d = new Date(parseInt(s.slice(0,4),10), parseInt(s.slice(4,6),10)-1, parseInt(s.slice(6,8),10), parseInt(s.slice(8,10),10), parseInt(s.slice(10,12),10), parseInt(s.slice(12,14),10));
-        return d.getTime();
-      }
-      // Unix timestamp in filename (e.g. 1773605220.jpg)
-      const m3 = filename.match(/(\d{10})(\.|$)/);
-      if (m3) return parseInt(m3[1], 10) * 1000;
-      const m4 = filename.match(/(\d{13})(\.|$)/);
-      if (m4) return parseInt(m4[1], 10);
-      return 0;
-    }
-
-    function formatImageTime(ms) {
-      if (!ms) return '—';
-      const d = new Date(ms);
-      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' });
-    }
-
-    let currentPreviewImageUrl = '';
-
-    function showPreview(imageUrl) {
-      const overlay = document.getElementById('preview-overlay');
-      const img = document.getElementById('preview-img');
-      if (!overlay || !img) return;
-      currentPreviewImageUrl = imageUrl || '';
-      img.src = imageUrl;
-      overlay.classList.add('visible');
-      overlay.setAttribute('aria-hidden', 'false');
-    }
-
-    function hidePreview() {
-      const overlay = document.getElementById('preview-overlay');
-      const img = document.getElementById('preview-img');
-      currentPreviewImageUrl = '';
-      if (overlay) {
-        overlay.classList.remove('visible');
-        overlay.setAttribute('aria-hidden', 'true');
-      }
-      if (img) img.src = '';
+    function fetchWithTimeout(url) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
     }
 
     function parseMacsResponse(text) {
@@ -628,7 +314,7 @@
         try {
           const data = JSON.parse(t);
           return Array.isArray(data) ? data : (data.macs || data.robots || []);
-        } catch (_) { /* fall through to text parse */ }
+        } catch (_) { }
       }
       return t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
     }
@@ -640,55 +326,22 @@
       el.className = 'api-status' + (isError ? ' error' : '');
     }
 
-    /** Cameras from registry API (same pattern as robots: /macs), fallback to image directory listing */
-    async function fetchCameraMacs() {
-      const url = cameraRegistryApi('camera/macs');
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        if (res.ok) {
-          const list = parseMacsResponse(text);
-          const macs = list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
-          if (macs.length) return macs.map(m => String(m).toLowerCase());
-        }
-      } catch (_) {}
-      const directUrl = (API_BASE || '').replace(/\/$/, '') + '/image/';
-      const proxyUrl = imageApiBaseForFetch() + '/';
-      const urlsToTry = [];
-      if (proxyUrl.startsWith('http')) urlsToTry.push(proxyUrl);
-      if (directUrl.startsWith('http') && !urlsToTry.includes(directUrl)) urlsToTry.push(directUrl);
-      for (const u of urlsToTry) {
-        try {
-          const res = await fetch(u);
-          const html = await res.text();
-          if (!res.ok) continue;
-          const entries = parseDirectoryListing(html, false);
-          const macs = entries.map(e => (e.href || e.text || '').trim()).filter(Boolean);
-          if (macs.length) return macs.map(m => m.toLowerCase());
-        } catch (_) {}
-      }
-      return [];
-    }
-
     async function fetchRobots() {
       const url = api('/macs');
-      setStatus('Loading robots…');
+      setStatus('Loading…');
       try {
-        const res = await fetch(url);
+        const res = await fetchWithTimeout(url);
         const text = await res.text();
         if (!res.ok) {
-          const preview = text.slice(0, 120).replace(/\s+/g, ' ');
-          setStatus(`Robots: ${res.status} ${res.statusText}. ${preview}`, true);
-          throw new Error(`Robots: ${res.status} ${res.statusText}`);
+          setStatus('Robots: ' + res.status + ' ' + res.statusText, true);
+          throw new Error('Robots: ' + res.status);
         }
         const list = parseMacsResponse(text);
         const macs = list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
-        setStatus(macs.length ? `API: ${url}` : `API returned empty (check ${url})`, !macs.length);
+        setStatus(macs.length ? 'Connected' : 'Empty list', !macs.length);
         return macs;
       } catch (e) {
-        const msg = (e.name === 'TypeError' && /fetch|network|loaded/i.test(String(e.message)))
-          ? 'Network or CORS error — open DevTools (F12) → Network to see blocked request'
-          : (e.message || String(e));
+        const msg = e.name === 'AbortError' ? 'Timed out' : (e.message || String(e));
         setStatus('Robots: ' + msg, true);
         throw e;
       }
@@ -697,30 +350,35 @@
     function parseJsonOrText(text) {
       const t = text.trim();
       if (t.startsWith('[') || t.startsWith('{')) {
-        try { return JSON.parse(t); } catch (_) { }
+        try {
+          const data = JSON.parse(t);
+          if (Array.isArray(data)) return { logs: data };
+          if (data && typeof data.logs === 'object') return data;
+          if (typeof data === 'string') return { logs: data.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) };
+          return { logs: [].concat(data) };
+        } catch (_) { }
       }
       return { logs: t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) };
     }
 
-    async function fetchLogs(mac, isCamera) {
-      const url = isCamera
-        ? cameraRegistryApi('/view/' + encodeURIComponent(mac))
-        : api('/view/' + encodeURIComponent(mac));
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        if (!res.ok) throw new Error(`Logs: ${res.status} ${res.statusText}`);
-        return parseJsonOrText(text);
-      } catch (e) {
-        setStatus('Logs: ' + (e.message || e), true);
-        throw e;
+    async function fetchLogs(mac) {
+      const viewPath = '/view/' + encodeURIComponent(mac);
+      const logPath = '/' + encodeURIComponent(mac) + '/log';
+      let res = await fetchWithTimeout(api(viewPath));
+      let text = await res.text();
+      if (!res.ok) {
+        setStatus('Trying /log…');
+        res = await fetchWithTimeout(api(logPath));
+        text = await res.text();
       }
+      if (!res.ok) throw new Error('Logs: ' + res.status);
+      return parseJsonOrText(text);
     }
 
     function renderRobotList() {
       const el = document.getElementById('robot-list');
       if (!robots.length) {
-        el.innerHTML = '<div class="empty-state">No robots found</div>';
+        el.innerHTML = '<div class="empty-state">No robots</div>';
         return;
       }
       el.innerHTML = [...robots].reverse().map((mac) => {
@@ -738,172 +396,16 @@
       });
     }
 
-    function renderCameraList() {
-      const el = document.getElementById('camera-list');
-      if (!el) return;
-      if (!cameras.length) {
-        el.innerHTML = '<div class="empty-state">No cameras found</div>';
-        return;
-      }
-      el.innerHTML = cameras.map((mac) => {
-        const active = mac === selectedCameraMac;
-        const label = mac.toUpperCase();
-        return `<div class="camera-item ${active ? 'active' : ''}" data-camera-mac="${escapeHtml(mac)}">
-          <span class="robot-mac">${escapeHtml(label)}</span>
-          <button type="button" class="camera-item-open" data-camera-mac="${escapeHtml(mac)}" title="Open camera images in new tab">New tab</button>
-        </div>`;
-      }).join('');
-      el.querySelectorAll('.camera-item').forEach(node => {
-        node.addEventListener('click', (e) => {
-          if (!e.target.classList.contains('camera-item-open')) selectCamera(node.dataset.cameraMac);
-        });
-      });
-      el.querySelectorAll('.camera-item-open').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const mac = btn.dataset.cameraMac;
-          if (mac) {
-            const base = imageApiBaseForDisplay();
-            const url = base + '/' + encodeURIComponent(mac) + '/';
-            window.open(url, '_blank', 'noopener');
-          }
-        });
-      });
-    }
-
-    function selectCamera(mac) {
-      selectedMac = null;
-      selectedCameraMac = mac || null;
-      renderRobotList();
-      const label = mac ? `Camera ${mac.toUpperCase()}` : 'Select a robot or camera';
-      document.getElementById('selected-robot-label').textContent = label;
-      const controlBar = document.getElementById('control-bar');
-      const cameraBar = document.getElementById('camera-control-bar');
-      if (controlBar) controlBar.classList.remove('visible');
-      if (cameraBar) cameraBar.classList.toggle('visible', !!mac);
-      renderCameraList();
-      updateImagesPanelFromSelection();
-      if (mac) loadLogs(mac, true);
-      else {
-        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot or camera to view logs</div>';
-      }
-    }
-
     function selectRobot(mac) {
-      selectedCameraMac = null;
       selectedMac = mac;
       const idx = robots.indexOf(mac);
-      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot or camera';
+      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot';
       document.getElementById('selected-robot-label').textContent = label;
-      const controlBar = document.getElementById('control-bar');
-      const cameraBar = document.getElementById('camera-control-bar');
-      if (controlBar) {
-        controlBar.classList.toggle('visible', !!mac);
-      }
-      if (cameraBar) cameraBar.classList.remove('visible');
-      updateImagesPanelFromSelection();
+      document.getElementById('control-bar').classList.toggle('visible', !!mac);
       renderRobotList();
-      renderCameraList();
-      if (mac) loadLogs(mac, false);
+      if (mac) loadLogs(mac);
       else {
-        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot or camera to view logs</div>';
-      }
-    }
-
-    function updateImagesPanelFromSelection() {
-      const macForImages = selectedCameraMac || selectedMac;
-      const isCamera = !!selectedCameraMac;
-      updateImagesPanel(macForImages, isCamera);
-    }
-
-    async function loadImageList(mac, isCamera) {
-      const placeholder = document.getElementById('images-placeholder');
-      const loading = document.getElementById('images-loading');
-      const listEl = document.getElementById('images-list');
-      const titleEl = document.getElementById('images-panel-title');
-      if (!placeholder || !loading || !listEl || !titleEl) return;
-      const macNorm = mac.toLowerCase();
-      titleEl.textContent = isCamera ? 'Images — Camera ' + mac.toUpperCase() : 'Images — ' + mac;
-      placeholder.style.display = 'none';
-      listEl.style.display = 'none';
-      loading.style.display = 'block';
-      listEl.innerHTML = '';
-      const baseFetch = imageApiBaseForFetch();
-      const baseDisplay = imageApiBaseForDisplay();
-      const pathPart = '/' + encodeURIComponent(macNorm);
-      let url = baseFetch + pathPart + '/';
-      let res = await fetch(url);
-      let html = await res.text();
-      if (res.status === 404) {
-        url = baseFetch + pathPart;
-        res = await fetch(url);
-        html = await res.text();
-      }
-      try {
-        if (!res.ok) {
-          listEl.innerHTML = '<div class="images-placeholder">Failed to load image list (' + res.status + '). Try setting window.ROBOT_IMAGE_API before load.</div>';
-          listEl.style.display = 'block';
-          return;
-        }
-        const entries = parseDirectoryListing(html, true);
-        const withTs = entries.map(e => ({
-          href: e.href,
-          text: e.text,
-          ts: parseTimestampFromFilename(e.href || e.text)
-        }));
-        withTs.sort((a, b) => (b.ts - a.ts));
-        if (withTs.length === 0) {
-          listEl.innerHTML = '<div class="images-placeholder">No images for this robot</div>';
-        } else {
-          listEl.innerHTML = withTs.map(entry => {
-            const timeStr = formatImageTime(entry.ts);
-            const imgUrl = baseDisplay + '/' + encodeURIComponent(macNorm) + '/' + encodeURIComponent(entry.href);
-            return '<div class="image-row" data-url="' + escapeHtml(imgUrl) + '" role="button" tabindex="0">' +
-              '<span class="image-row-time">' + escapeHtml(timeStr) + '</span>' +
-              '<span class="image-row-filename">' + escapeHtml(entry.href) + '</span>' +
-              '<button type="button" class="image-row-open-new" data-url="' + escapeHtml(imgUrl) + '" title="Open in new tab">New tab</button></div>';
-          }).join('');
-          listEl.querySelectorAll('.image-row').forEach(row => {
-            const url = row.dataset.url;
-            row.addEventListener('click', (e) => { if (!e.target.classList.contains('image-row-open-new')) showPreview(url); });
-            row.addEventListener('keydown', (e) => { if (e.target.classList.contains('image-row-open-new')) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showPreview(url); } });
-          });
-          listEl.querySelectorAll('.image-row-open-new').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const u = btn.getAttribute('data-url');
-              if (u) window.open(u, '_blank', 'noopener');
-            });
-          });
-        }
-        listEl.style.display = 'block';
-      } catch (e) {
-        listEl.innerHTML = '<div class="images-placeholder error-state">' + escapeHtml(e.message || String(e)) + '</div>';
-        listEl.style.display = 'block';
-      } finally {
-        loading.style.display = 'none';
-      }
-    }
-
-    function updateImagesPanel(mac, isCamera) {
-      const placeholder = document.getElementById('images-placeholder');
-      const loading = document.getElementById('images-loading');
-      const listEl = document.getElementById('images-list');
-      const titleEl = document.getElementById('images-panel-title');
-      if (!placeholder || !titleEl) return;
-      if (mac) {
-        loadImageList(mac, !!isCamera);
-      } else {
-        if (loading) loading.style.display = 'none';
-        if (listEl) {
-          listEl.style.display = 'none';
-          listEl.innerHTML = '';
-        }
-        placeholder.style.display = 'block';
-        placeholder.textContent = 'Select a robot or camera to view images';
-        titleEl.textContent = 'Images';
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot</div>';
       }
     }
 
@@ -912,7 +414,7 @@
       if (!el) return;
       el.textContent = msg || '';
       el.className = 'control-feedback' + (isError ? ' error' : ' success');
-      el.style.display = msg ? 'inline-block' : 'none';
+      el.style.display = msg ? 'block' : 'none';
       if (msg) {
         clearTimeout(window._controlFeedbackTimer);
         window._controlFeedbackTimer = setTimeout(() => {
@@ -922,26 +424,22 @@
       }
     }
 
-    async function triggerControl(path, buttonId) {
+    async function triggerControl(path) {
       if (!selectedMac) return;
-      void buttonId;
-      const btnLeft = document.getElementById('btn-run-left');
-      const btnRight = document.getElementById('btn-run-right');
-      const btnOta = document.getElementById('btn-ota');
-      const btnMoveForward = document.getElementById('btn-move-forward');
-      const btnMoveBackward = document.getElementById('btn-move-backward');
-      const btnStop = document.getElementById('btn-stop');
-      const buttons = [btnLeft, btnRight, btnOta, btnMoveForward, btnMoveBackward, btnStop];
+      const buttons = [
+        document.getElementById('btn-run-left'),
+        document.getElementById('btn-run-right'),
+        document.getElementById('btn-ota'),
+        document.getElementById('btn-move-forward'),
+        document.getElementById('btn-move-backward'),
+        document.getElementById('btn-stop')
+      ];
       buttons.forEach(b => { if (b) b.disabled = true; });
       try {
         const url = apiControl(path);
-        const res = await fetch(url);
+        const res = await fetchWithTimeout(url);
         const text = await res.text();
-        if (res.ok) {
-          showControlFeedback(text.trim() || 'OK', false);
-        } else {
-          showControlFeedback(text.trim() || res.status + ' ' + res.statusText, true);
-        }
+        showControlFeedback(text.trim() || (res.ok ? 'OK' : res.status + ' ' + res.statusText), !res.ok);
       } catch (e) {
         showControlFeedback(e.message || String(e), true);
       } finally {
@@ -951,82 +449,32 @@
 
     function setupControlButtons() {
       const getMoveMs = () => {
-        const input = document.getElementById('move-duration-ms');
-        const raw = input ? input.value : '1500';
+        const raw = document.getElementById('move-duration-ms')?.value || '1500';
         const ms = parseInt(raw, 10);
-        if (!Number.isFinite(ms) || ms < 1) return null;
-        return ms;
+        return Number.isFinite(ms) && ms >= 1 ? ms : null;
       };
       document.getElementById('btn-move-forward')?.addEventListener('click', () => {
         const ms = getMoveMs();
-        if (!ms) return showControlFeedback('Enter valid move time in ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/forward/' + ms, 'btn-move-forward');
+        if (!ms) return showControlFeedback('Enter valid ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/forward/' + ms);
       });
       document.getElementById('btn-move-backward')?.addEventListener('click', () => {
         const ms = getMoveMs();
-        if (!ms) return showControlFeedback('Enter valid move time in ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/backward/' + ms, 'btn-move-backward');
+        if (!ms) return showControlFeedback('Enter valid ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/backward/' + ms);
       });
       document.getElementById('btn-stop')?.addEventListener('click', () => {
-        triggerControl('/stop/' + encodeURIComponent(selectedMac), 'btn-stop');
+        triggerControl('/stop/' + encodeURIComponent(selectedMac));
       });
       document.getElementById('btn-run-left')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/left', 'btn-run-left');
+        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/left');
       });
       document.getElementById('btn-run-right')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/right', 'btn-run-right');
+        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/right');
       });
       document.getElementById('btn-ota')?.addEventListener('click', () => {
-        triggerControl('/ota/' + encodeURIComponent(selectedMac) + '/set', 'btn-ota');
+        triggerControl('/ota/' + encodeURIComponent(selectedMac) + '/set');
       });
-    }
-
-    function showCameraControlFeedback(msg, isError) {
-      const el = document.getElementById('camera-control-feedback');
-      if (!el) return;
-      el.textContent = msg || '';
-      el.className = 'control-feedback' + (isError ? ' error' : ' success');
-      el.style.display = msg ? 'inline-block' : 'none';
-      if (msg) {
-        clearTimeout(window._cameraControlFeedbackTimer);
-        window._cameraControlFeedbackTimer = setTimeout(() => {
-          el.textContent = '';
-          el.style.display = 'none';
-        }, 3500);
-      }
-    }
-
-    async function triggerCameraStart() {
-      if (!selectedCameraMac) return;
-      const btn = document.getElementById('btn-camera-start');
-      const input = document.getElementById('camera-timer-input');
-      const timerRaw = input ? input.value : '15';
-      const timer = parseInt(timerRaw, 10);
-      if (!Number.isFinite(timer) || timer < 1) {
-        showCameraControlFeedback('Enter a valid timer (seconds)', true);
-        return;
-      }
-      const mac = selectedCameraMac.toUpperCase();
-      const base = getCameraControlBase();
-      const url = base + '/start/' + encodeURIComponent(mac) + '/set/' + timer;
-      if (btn) btn.disabled = true;
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        if (res.ok) {
-          showCameraControlFeedback(text.trim() || 'OK', false);
-        } else {
-          showCameraControlFeedback(text.trim() || res.status + ' ' + res.statusText, true);
-        }
-      } catch (e) {
-        showCameraControlFeedback(e.message || String(e), true);
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function setupCameraControlButtons() {
-      document.getElementById('btn-camera-start')?.addEventListener('click', triggerCameraStart);
     }
 
     function setRobotOnline(mac, online) {
@@ -1035,25 +483,25 @@
       robotStatus[mac].online = online;
     }
 
-    async function loadLogs(mac, isCamera) {
+    async function loadLogs(mac) {
       const content = document.getElementById('logs-content');
       content.innerHTML = '<div class="empty-state">Loading…</div>';
       try {
-        const data = await fetchLogs(mac, !!isCamera);
-        if (!isCamera) setRobotOnline(mac, true);
-        const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : []);
-        const lines = Array.isArray(logs) ? [...logs].reverse() : [logs];
-        if (lines.length === 0) {
-          content.innerHTML = '<div class="empty-state">No logs yet</div>';
+        const data = await fetchLogs(mac);
+        setRobotOnline(mac, true);
+        const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : (typeof data === 'string' ? data.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : []));
+        const lines = Array.isArray(logs) ? [...logs].reverse() : (logs ? [logs] : []);
+        if (!lines.length) {
+          content.innerHTML = '<div class="empty-state">No logs</div>';
         } else {
           content.innerHTML = lines.map(l => {
-            const text = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
+            const t = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
             const time = l.timestamp ?? l.time ?? '';
-            return `<div class="log-line">${time ? `<span class="text-muted">${time}</span> ` : ''}${escapeHtml(text)}</div>`;
+            return `<div class="log-line">${time ? `<span class="text-muted">${escapeHtml(String(time))}</span> ` : ''}${escapeHtml(String(t))}</div>`;
           }).join('');
         }
       } catch (e) {
-        if (!isCamera) setRobotOnline(mac, false);
+        setRobotOnline(mac, false);
         content.innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
       }
       renderRobotList();
@@ -1075,11 +523,7 @@
           return acc;
         }, {});
         renderRobotList();
-        const fetched = await fetchCameraMacs();
-        cameras = fetched.length ? [...new Set([ ...fetched])]:[];
-        renderCameraList();
-        if (selectedMac) loadLogs(selectedMac, false);
-        else if (selectedCameraMac) loadLogs(selectedCameraMac, true);
+        if (selectedMac) loadLogs(selectedMac);
       } catch (e) {
         document.getElementById('robot-list').innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
       }
@@ -1105,69 +549,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       setupControlButtons();
-      setupCameraControlButtons();
       startRefresh();
-      const imageServerInput = document.getElementById('image-server-input');
-      if (imageServerInput) {
-        try {
-          const saved = localStorage.getItem('ROBOT_IMAGE_API');
-          imageServerInput.value = saved && saved.trim() ? saved.trim() : (API_BASE || '').replace(/\/$/, '');
-        } catch (_) {
-          imageServerInput.value = (API_BASE || '').replace(/\/$/, '');
-        }
-      }
-      document.getElementById('image-server-apply')?.addEventListener('click', () => {
-        const input = document.getElementById('image-server-input');
-        if (!input) return;
-        const val = (input.value || '').trim().replace(/\/$/, '');
-        try {
-          if (val) {
-            localStorage.setItem('ROBOT_IMAGE_API', val);
-          } else {
-            localStorage.removeItem('ROBOT_IMAGE_API');
-          }
-        } catch (_) {}
-        updateImagesPanelFromSelection();
-      });
-      document.getElementById('preview-close')?.addEventListener('click', hidePreview);
-      document.getElementById('preview-open-new')?.addEventListener('click', () => {
-        if (currentPreviewImageUrl) window.open(currentPreviewImageUrl, '_blank', 'noopener');
-      });
-      document.getElementById('preview-overlay')?.addEventListener('click', (e) => {
-        if (e.target.id === 'preview-overlay') hidePreview();
-      });
-      const regIn = document.getElementById('camera-registry-input');
-      const ctlIn = document.getElementById('camera-control-input');
-      const timerIn = document.getElementById('camera-timer-input');
-      if (regIn) {
-        try {
-          regIn.value = localStorage.getItem('ROBOT_CAMERA_API') || getCameraRegistryBase();
-        } catch (_) { regIn.value = getCameraRegistryBase(); }
-      }
-      if (ctlIn) {
-        try {
-          ctlIn.value = localStorage.getItem('ROBOT_CAMERA_CONTROL') || getCameraControlBase();
-        } catch (_) { ctlIn.value = getCameraControlBase(); }
-      }
-      if (timerIn) {
-        try {
-          const t = localStorage.getItem('ROBOT_CAMERA_TIMER');
-          if (t && /^\d+$/.test(t)) timerIn.value = t;
-        } catch (_) {}
-      }
-      document.getElementById('camera-endpoints-apply')?.addEventListener('click', () => {
-        const r = (document.getElementById('camera-registry-input')?.value || '').trim().replace(/\/$/, '');
-        const c = (document.getElementById('camera-control-input')?.value || '').trim().replace(/\/$/, '');
-        try {
-          if (r) localStorage.setItem('ROBOT_CAMERA_API', r); else localStorage.removeItem('ROBOT_CAMERA_API');
-          if (c) localStorage.setItem('ROBOT_CAMERA_CONTROL', c); else localStorage.removeItem('ROBOT_CAMERA_CONTROL');
-        } catch (_) {}
-        refresh();
-      });
-      document.getElementById('camera-timer-input')?.addEventListener('change', () => {
-        const v = document.getElementById('camera-timer-input')?.value;
-        try { if (v && /^\d+$/.test(v)) localStorage.setItem('ROBOT_CAMERA_TIMER', v); } catch (_) {}
-      });
     });
   </script>
 </body>
