@@ -195,6 +195,34 @@
     }
     .log-line:last-child { border-bottom: none; }
     .log-line .text-muted { color: var(--text-muted); }
+    .log-time-wrap {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+    .log-time-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.1rem 0.38rem;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .log-time-tag.log-time-gmt {
+      background: rgba(9, 105, 218, 0.08);
+      color: #0550ae;
+      border-color: rgba(9, 105, 218, 0.25);
+    }
+    .log-time-tag.log-time-ist {
+      background: rgba(45, 164, 78, 0.1);
+      color: var(--accent-dim);
+      border-color: rgba(45, 164, 78, 0.28);
+    }
     .empty-state, .error-state {
       padding: 1.5rem 1rem;
       text-align: center;
@@ -667,11 +695,97 @@
       wifiStatus[mac].online = online;
     }
 
+    /** Naive [YYYY-MM-DD HH:mm:ss] matches server UTC/GMT. Set window.ROBOT_DASHBOARD_LOG_BRACKET_TZ = 'IST' if stamps are India wall time without offset. */
+    function logBracketZoneSuffix() {
+      const tz = window.ROBOT_DASHBOARD_LOG_BRACKET_TZ;
+      if (tz === 'IST' || tz === 'Asia/Kolkata') return '+05:30';
+      return 'Z';
+    }
+
+    function parseBracketLogLine(line) {
+      const m = String(line).match(/^\[(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)\]\s*(.*)$/);
+      if (!m) return null;
+      const iso = m[1] + 'T' + m[2] + logBracketZoneSuffix();
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return null;
+      return { date, rest: m[3] };
+    }
+
+    function parseLogTime(raw) {
+      if (raw == null || raw === '') return null;
+      if (typeof raw === 'number' && Number.isFinite(raw)) {
+        const d = new Date(raw < 1e12 ? raw * 1000 : raw);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      const s = String(raw).trim();
+      if (!s) return null;
+      const asNum = Number(s);
+      if (/^-?\d+(\.\d+)?$/.test(s) && Number.isFinite(asNum)) {
+        const d = new Date(asNum < 1e12 ? asNum * 1000 : asNum);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) {
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+      const naiveIso = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)$/);
+      if (naiveIso) {
+        const d = new Date(naiveIso[1] + 'T' + naiveIso[2] + logBracketZoneSuffix());
+        if (!Number.isNaN(d.getTime())) return d;
+      }
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatGmtIstTags(date) {
+      const gmtFmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'UTC',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      const istFmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      const gmt = gmtFmt.format(date) + ' GMT';
+      const ist = istFmt.format(date) + ' IST';
+      return `<span class="log-time-tag log-time-gmt" title="UTC (same instant as GMT) — matches server if logs are UTC">${escapeHtml(gmt)}</span><span class="log-time-tag log-time-ist" title="India Standard Time (UTC+5:30)">${escapeHtml(ist)}</span>`;
+    }
+
     function renderLogLines(lines) {
       return lines.map(l => {
-        const t = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
-        const time = (typeof l === 'object' && l) ? (l.timestamp ?? l.time ?? '') : '';
-        return `<div class="log-line">${time ? `<span class="text-muted">${escapeHtml(String(time))}</span> ` : ''}${escapeHtml(String(t))}</div>`;
+        if (typeof l === 'string') {
+          const br = parseBracketLogLine(l);
+          if (br) {
+            return `<div class="log-line"><span class="log-time-wrap">${formatGmtIstTags(br.date)}</span> ${escapeHtml(br.rest)}</div>`;
+          }
+          return `<div class="log-line">${escapeHtml(l)}</div>`;
+        }
+        const rawTime = l.timestamp ?? l.time ?? l.ts ?? l.created_at ?? l.date ?? '';
+        let body = String(l.message ?? l.text ?? JSON.stringify(l));
+        let parsed = parseLogTime(rawTime);
+        if (!parsed) {
+          const br = parseBracketLogLine(body);
+          if (br) {
+            parsed = br.date;
+            body = br.rest;
+          }
+        }
+        const timeHtml = parsed
+          ? `<span class="log-time-wrap">${formatGmtIstTags(parsed)}</span>`
+          : (rawTime !== '' && rawTime != null ? `<span class="log-time-wrap"><span class="log-time-tag log-time-gmt">${escapeHtml(String(rawTime))}</span></span> ` : '');
+        return `<div class="log-line">${timeHtml ? timeHtml + ' ' : ''}${escapeHtml(body)}</div>`;
       }).join('');
     }
 
