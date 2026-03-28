@@ -44,6 +44,8 @@ const server = http.createServer((req, res) => {
     serveFile(path.join(__dirname, 'index.html'), res);
     return;
   }
+  // /api + upstream path → https://server2.sudoyantra.com + path
+  // e.g. /api/wifi_view/view/MAC → https://server2.sudoyantra.com/wifi_view/view/MAC
   if (p.startsWith('/api/')) {
     proxy(req, res, p.replace(/^\/api/, ''));
     return;
@@ -54,5 +56,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Robot Dashboard: http://localhost:${PORT}`);
-  console.log(`Proxying /api/* → ${ROBOT_API}`);
+  console.log(`Proxying /api/* → ${ROBOT_API} (includes /macs, /wifi_view/*, /wifi_api/* via /api/wifi_api/...)`);
 });

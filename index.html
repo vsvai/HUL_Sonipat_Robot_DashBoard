@@ -17,6 +17,7 @@
       --text-muted: #656d76;
       --accent: #2da44e;
       --accent-dim: #1a7f37;
+      --wifi-accent: #0969da;
       --offline: #afb8c1;
       --error: #cf222e;
       --safe-top: env(safe-area-inset-top, 0px);
@@ -70,6 +71,37 @@
       overflow-y: auto;
       background: var(--panel);
     }
+    .aside-tabs {
+      display: flex;
+      gap: 0.35rem;
+      padding: 0 0.75rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.5rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.5rem 0.5rem;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      touch-action: manipulation;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .tab-btn[data-tab="wifi"].active {
+      background: var(--wifi-accent);
+      border-color: var(--wifi-accent);
+    }
+    .aside-panel.hidden { display: none; }
     .robots-title {
       font-size: 0.7rem;
       font-weight: 600;
@@ -93,6 +125,10 @@
     .robot-item.active {
       background: rgba(45, 164, 78, 0.12);
       border-left-color: var(--accent);
+    }
+    .robot-item.wifi-active {
+      background: rgba(9, 105, 218, 0.1);
+      border-left-color: var(--wifi-accent);
     }
     .status-dot {
       width: 10px;
@@ -181,6 +217,7 @@
       gap: 0.5rem;
       padding: 0 0 0.65rem;
       flex-wrap: wrap;
+      align-items: center;
     }
     .control-bar.visible { display: flex; }
     .control-bar button {
@@ -207,7 +244,14 @@
     .control-bar button.btn-ota { border-color: #bf8700; color: #9a6700; }
     .control-bar button.btn-move { border-color: #1f6feb; color: #1f6feb; }
     .control-bar button.btn-stop { border-color: var(--error); color: var(--error); }
-    #move-duration-ms {
+    .wifi-control-bar button.btn-wifi-cam { border-color: var(--wifi-accent); color: var(--wifi-accent); }
+    .wifi-timer-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      width: 100%;
+      flex-basis: 100%;
+    }
+    #move-duration-ms, #wifi-timer-sec {
       width: 6.5rem;
       max-width: 100%;
       padding: 0.5rem 0.5rem;
@@ -234,7 +278,7 @@
       aside {
         width: 100%;
         min-width: 0;
-        max-height: min(42vh, 320px);
+        max-height: min(42vh, 360px);
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
@@ -243,7 +287,7 @@
         flex: 1 1 calc(50% - 0.25rem);
         min-width: calc(50% - 0.25rem);
       }
-      #move-duration-ms {
+      #move-duration-ms, #wifi-timer-sec {
         width: 100%;
         flex: 1 1 100%;
       }
@@ -258,12 +302,22 @@
   </header>
   <main>
     <aside>
-      <div class="robots-title">Robots</div>
-      <div id="robot-list"></div>
+      <div class="aside-tabs" role="tablist">
+        <button type="button" class="tab-btn active" id="tab-robots" data-tab="robots" aria-selected="true">Robots</button>
+        <button type="button" class="tab-btn" id="tab-wifi" data-tab="wifi" aria-selected="false">Wi‑Fi</button>
+      </div>
+      <div id="panel-robots" class="aside-panel">
+        <div class="robots-title">Robots</div>
+        <div id="robot-list"></div>
+      </div>
+      <div id="panel-wifi" class="aside-panel hidden">
+        <div class="robots-title">Wi‑Fi devices</div>
+        <div id="wifi-list"></div>
+      </div>
       <div id="api-status" class="api-status"></div>
     </aside>
     <section class="section">
-      <div class="section-header">Latest logs — <span id="selected-robot-label">Select a robot</span></div>
+      <div class="section-header">Logs — <span id="selected-device-label">Select a robot or Wi‑Fi device</span></div>
       <div id="control-bar" class="control-bar">
         <input type="number" id="move-duration-ms" min="1" step="100" value="1500" inputmode="numeric" title="Move duration (ms)" />
         <button type="button" id="btn-move-forward" class="btn-move">Forward</button>
@@ -272,7 +326,14 @@
         <button type="button" id="btn-run-left" class="btn-left">← Left</button>
         <button type="button" id="btn-run-right" class="btn-right">Right →</button>
         <button type="button" id="btn-ota" class="btn-ota">OTA</button>
-        <span id="control-feedback" class="control-feedback" aria-live="polite"></span>
+        <span id="control-feedback" class="control-feedback" style="display:none" aria-live="polite"></span>
+      </div>
+      <div id="wifi-control-bar" class="control-bar wifi-control-bar">
+        <label class="wifi-timer-label" for="wifi-timer-sec">Timer (seconds)</label>
+        <input type="number" id="wifi-timer-sec" min="1" max="86400" value="10" inputmode="numeric" title="Seconds for start / Wi‑Fi" />
+        <button type="button" id="btn-wifi-start-camera" class="btn-wifi-cam" title="GET /wifi_api/start/{mac}/set/{sec}">Start camera</button>
+        <button type="button" id="btn-wifi-start-wifi" class="btn-wifi-cam" title="GET /wifi_api/wifi/{mac}/set/{sec}">Start Wi‑Fi + camera</button>
+        <span id="wifi-control-feedback" class="control-feedback" style="display:none" aria-live="polite"></span>
       </div>
       <div class="logs-panel">
         <div class="logs-title">Logs</div>
@@ -281,15 +342,27 @@
     </section>
   </main>
   <script>
-    const API_BASE = 'https://server2.sudoyantra.com';
-    const API_BASE_CONTROL = (window.ROBOT_DASHBOARD_API_CONTROL || 'https://server2.sudoyantra.com/api').replace(/\/$/, '');
+    const REMOTE_API = 'https://server2.sudoyantra.com';
+    // Same-origin /api proxy (server.js) avoids CORS; /wifi_view/* is often blocked when /macs is not.
+    const USE_LOCAL_PROXY = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') && String(location.port || '') === '3000';
+    const _origin = location.origin.replace(/\/$/, '');
+    const API_BASE = USE_LOCAL_PROXY ? _origin + '/api' : REMOTE_API;
+    const API_BASE_CONTROL = USE_LOCAL_PROXY
+      ? _origin + '/api/api'
+      : (window.ROBOT_DASHBOARD_API_CONTROL || REMOTE_API + '/api').replace(/\/$/, '');
+    const API_BASE_WIFI_API = USE_LOCAL_PROXY
+      ? _origin + '/api/wifi_api'
+      : (window.WIFI_API_BASE || REMOTE_API + '/wifi_api').replace(/\/$/, '');
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000;
     const FETCH_TIMEOUT_MS = 15000;
 
     let robots = [];
     let robotStatus = {};
-    let selectedMac = null;
+    let selectedRobotMac = null;
+    let wifiDevices = [];
+    let wifiStatus = {};
+    let selectedWifiMac = null;
     let refreshTimer = null;
     let countdownTimer = null;
 
@@ -299,6 +372,10 @@
     function apiControl(path) {
       const p = path.startsWith('/') ? path : '/' + path;
       return API_BASE_CONTROL + p;
+    }
+    function apiWifi(path) {
+      const p = path.startsWith('/') ? path : '/' + path;
+      return API_BASE_WIFI_API + p;
     }
 
     function fetchWithTimeout(url) {
@@ -313,7 +390,9 @@
       if (t.startsWith('[') || t.startsWith('{')) {
         try {
           const data = JSON.parse(t);
-          return Array.isArray(data) ? data : (data.macs || data.robots || []);
+          if (Array.isArray(data)) return data;
+          if (data.mac_ids && Array.isArray(data.mac_ids)) return data.mac_ids;
+          return data.macs || data.robots || [];
         } catch (_) { }
       }
       return t.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
@@ -326,25 +405,22 @@
       el.className = 'api-status' + (isError ? ' error' : '');
     }
 
-    async function fetchRobots() {
+    async function fetchRobotsList() {
       const url = api('/macs');
-      setStatus('Loading…');
-      try {
-        const res = await fetchWithTimeout(url);
-        const text = await res.text();
-        if (!res.ok) {
-          setStatus('Robots: ' + res.status + ' ' + res.statusText, true);
-          throw new Error('Robots: ' + res.status);
-        }
-        const list = parseMacsResponse(text);
-        const macs = list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
-        setStatus(macs.length ? 'Connected' : 'Empty list', !macs.length);
-        return macs;
-      } catch (e) {
-        const msg = e.name === 'AbortError' ? 'Timed out' : (e.message || String(e));
-        setStatus('Robots: ' + msg, true);
-        throw e;
-      }
+      const res = await fetchWithTimeout(url);
+      const text = await res.text();
+      if (!res.ok) throw new Error('Robots ' + res.status);
+      const list = parseMacsResponse(text);
+      return list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
+    }
+
+    async function fetchWifiMacsList() {
+      const url = api('/wifi_view/macs');
+      const res = await fetchWithTimeout(url);
+      const text = await res.text();
+      if (!res.ok) throw new Error('Wi‑Fi list ' + res.status);
+      const list = parseMacsResponse(text);
+      return list.map(r => typeof r === 'string' ? r : (r.mac ?? r.id ?? r)).filter(Boolean);
     }
 
     function parseJsonOrText(text) {
@@ -367,11 +443,23 @@
       let res = await fetchWithTimeout(api(viewPath));
       let text = await res.text();
       if (!res.ok) {
-        setStatus('Trying /log…');
         res = await fetchWithTimeout(api(logPath));
         text = await res.text();
       }
       if (!res.ok) throw new Error('Logs: ' + res.status);
+      return parseJsonOrText(text);
+    }
+
+    async function fetchWifiLogs(mac) {
+      const viewPath = '/wifi_view/view/' + encodeURIComponent(mac);
+      let res = await fetchWithTimeout(api(viewPath));
+      let text = await res.text();
+      if (!res.ok) {
+        const alt = '/wifi_view/' + encodeURIComponent(mac) + '/log';
+        res = await fetchWithTimeout(api(alt));
+        text = await res.text();
+      }
+      if (!res.ok) throw new Error('Wi‑Fi logs: ' + res.status);
       return parseJsonOrText(text);
     }
 
@@ -384,7 +472,7 @@
       el.innerHTML = [...robots].reverse().map((mac) => {
         const status = robotStatus[mac];
         const online = status && status.online;
-        const active = mac === selectedMac;
+        const active = mac === selectedRobotMac;
         const label = `Robot ${robots.indexOf(mac) + 1} (${mac})`;
         return `<div class="robot-item ${active ? 'active' : ''}" data-mac="${escapeHtml(mac)}">
           <span class="status-dot ${online ? 'online' : 'offline'}"></span>
@@ -396,16 +484,61 @@
       });
     }
 
+    function renderWifiList() {
+      const el = document.getElementById('wifi-list');
+      if (!wifiDevices.length) {
+        el.innerHTML = '<div class="empty-state">No Wi‑Fi devices</div>';
+        return;
+      }
+      el.innerHTML = [...wifiDevices].reverse().map((mac) => {
+        const status = wifiStatus[mac];
+        const online = status && status.online;
+        const active = mac === selectedWifiMac;
+        const label = `Wi‑Fi ${wifiDevices.indexOf(mac) + 1} (${mac})`;
+        return `<div class="robot-item wifi-item ${active ? 'wifi-active' : ''}" data-wifi-mac="${escapeHtml(mac)}">
+          <span class="status-dot ${online ? 'online' : 'offline'}"></span>
+          <span class="robot-mac">${escapeHtml(label)}</span>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.wifi-item').forEach(node => {
+        node.addEventListener('click', () => selectWifiMac(node.dataset.wifiMac));
+      });
+    }
+
+    function updateMainChrome() {
+      const robotBar = document.getElementById('control-bar');
+      const wifiBar = document.getElementById('wifi-control-bar');
+      robotBar.classList.toggle('visible', !!selectedRobotMac);
+      wifiBar.classList.toggle('visible', !!selectedWifiMac);
+    }
+
     function selectRobot(mac) {
-      selectedMac = mac;
+      selectedRobotMac = mac || null;
+      selectedWifiMac = null;
       const idx = robots.indexOf(mac);
-      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot';
-      document.getElementById('selected-robot-label').textContent = label;
-      document.getElementById('control-bar').classList.toggle('visible', !!mac);
+      const label = mac ? (idx >= 0 ? `Robot ${idx + 1} (${mac})` : mac) : 'Select a robot or Wi‑Fi device';
+      document.getElementById('selected-device-label').textContent = label;
       renderRobotList();
-      if (mac) loadLogs(mac);
+      renderWifiList();
+      updateMainChrome();
+      if (mac) loadRobotLogs(mac);
       else {
-        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a robot</div>';
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a device</div>';
+      }
+    }
+
+    function selectWifiMac(mac) {
+      selectedWifiMac = mac || null;
+      selectedRobotMac = null;
+      const idx = wifiDevices.indexOf(mac);
+      const label = mac ? (idx >= 0 ? `Wi‑Fi ${idx + 1} (${mac})` : mac) : 'Select a robot or Wi‑Fi device';
+      document.getElementById('selected-device-label').textContent = label;
+      renderRobotList();
+      renderWifiList();
+      updateMainChrome();
+      if (mac) loadWifiLogsPanel(mac);
+      else {
+        document.getElementById('logs-content').innerHTML = '<div class="empty-state">Select a device</div>';
       }
     }
 
@@ -424,8 +557,23 @@
       }
     }
 
+    function showWifiControlFeedback(msg, isError) {
+      const el = document.getElementById('wifi-control-feedback');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'control-feedback' + (isError ? ' error' : ' success');
+      el.style.display = msg ? 'block' : 'none';
+      if (msg) {
+        clearTimeout(window._wifiControlFeedbackTimer);
+        window._wifiControlFeedbackTimer = setTimeout(() => {
+          el.textContent = '';
+          el.style.display = 'none';
+        }, 3500);
+      }
+    }
+
     async function triggerControl(path) {
-      if (!selectedMac) return;
+      if (!selectedRobotMac) return;
       const buttons = [
         document.getElementById('btn-run-left'),
         document.getElementById('btn-run-right'),
@@ -447,6 +595,35 @@
       }
     }
 
+    function getWifiTimerSec() {
+      const raw = document.getElementById('wifi-timer-sec')?.value || '10';
+      const sec = parseInt(raw, 10);
+      return Number.isFinite(sec) && sec >= 1 ? sec : null;
+    }
+
+    async function triggerWifiAction(kind) {
+      if (!selectedWifiMac) return;
+      const sec = getWifiTimerSec();
+      if (sec == null) return showWifiControlFeedback('Enter valid seconds', true);
+      const macLower = String(selectedWifiMac).toLowerCase();
+      const path = kind === 'camera'
+        ? '/start/' + encodeURIComponent(macLower) + '/set/' + sec
+        : '/wifi/' + encodeURIComponent(macLower) + '/set/' + sec;
+      const btnCam = document.getElementById('btn-wifi-start-camera');
+      const btnWifi = document.getElementById('btn-wifi-start-wifi');
+      [btnCam, btnWifi].forEach(b => { if (b) b.disabled = true; });
+      try {
+        const url = apiWifi(path);
+        const res = await fetchWithTimeout(url);
+        const text = await res.text();
+        showWifiControlFeedback(text.trim() || (res.ok ? 'OK' : res.status + ' ' + res.statusText), !res.ok);
+      } catch (e) {
+        showWifiControlFeedback(e.message || String(e), true);
+      } finally {
+        [btnCam, btnWifi].forEach(b => { if (b) b.disabled = false; });
+      }
+    }
+
     function setupControlButtons() {
       const getMoveMs = () => {
         const raw = document.getElementById('move-duration-ms')?.value || '1500';
@@ -456,25 +633,27 @@
       document.getElementById('btn-move-forward')?.addEventListener('click', () => {
         const ms = getMoveMs();
         if (!ms) return showControlFeedback('Enter valid ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/forward/' + ms);
+        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/forward/' + ms);
       });
       document.getElementById('btn-move-backward')?.addEventListener('click', () => {
         const ms = getMoveMs();
         if (!ms) return showControlFeedback('Enter valid ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedMac) + '/backward/' + ms);
+        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/backward/' + ms);
       });
       document.getElementById('btn-stop')?.addEventListener('click', () => {
-        triggerControl('/stop/' + encodeURIComponent(selectedMac));
+        triggerControl('/stop/' + encodeURIComponent(selectedRobotMac));
       });
       document.getElementById('btn-run-left')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/left');
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/left');
       });
       document.getElementById('btn-run-right')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedMac) + '/set/right');
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/right');
       });
       document.getElementById('btn-ota')?.addEventListener('click', () => {
-        triggerControl('/ota/' + encodeURIComponent(selectedMac) + '/set');
+        triggerControl('/ota/' + encodeURIComponent(selectedRobotMac) + '/set');
       });
+      document.getElementById('btn-wifi-start-camera')?.addEventListener('click', () => triggerWifiAction('camera'));
+      document.getElementById('btn-wifi-start-wifi')?.addEventListener('click', () => triggerWifiAction('wifi'));
     }
 
     function setRobotOnline(mac, online) {
@@ -482,8 +661,21 @@
       robotStatus[mac].lastSeen = Date.now();
       robotStatus[mac].online = online;
     }
+    function setWifiOnline(mac, online) {
+      if (!wifiStatus[mac]) wifiStatus[mac] = {};
+      wifiStatus[mac].lastSeen = Date.now();
+      wifiStatus[mac].online = online;
+    }
 
-    async function loadLogs(mac) {
+    function renderLogLines(lines) {
+      return lines.map(l => {
+        const t = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
+        const time = (typeof l === 'object' && l) ? (l.timestamp ?? l.time ?? '') : '';
+        return `<div class="log-line">${time ? `<span class="text-muted">${escapeHtml(String(time))}</span> ` : ''}${escapeHtml(String(t))}</div>`;
+      }).join('');
+    }
+
+    async function loadRobotLogs(mac) {
       const content = document.getElementById('logs-content');
       content.innerHTML = '<div class="empty-state">Loading…</div>';
       try {
@@ -494,11 +686,7 @@
         if (!lines.length) {
           content.innerHTML = '<div class="empty-state">No logs</div>';
         } else {
-          content.innerHTML = lines.map(l => {
-            const t = typeof l === 'string' ? l : (l.message ?? l.text ?? JSON.stringify(l));
-            const time = l.timestamp ?? l.time ?? '';
-            return `<div class="log-line">${time ? `<span class="text-muted">${escapeHtml(String(time))}</span> ` : ''}${escapeHtml(String(t))}</div>`;
-          }).join('');
+          content.innerHTML = renderLogLines(lines);
         }
       } catch (e) {
         setRobotOnline(mac, false);
@@ -507,15 +695,55 @@
       renderRobotList();
     }
 
+    async function loadWifiLogsPanel(mac) {
+      const content = document.getElementById('logs-content');
+      content.innerHTML = '<div class="empty-state">Loading…</div>';
+      try {
+        const data = await fetchWifiLogs(mac);
+        setWifiOnline(mac, true);
+        const logs = data.logs ?? data.data ?? (Array.isArray(data) ? data : (typeof data === 'string' ? data.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean) : []));
+        const lines = Array.isArray(logs) ? [...logs].reverse() : (logs ? [logs] : []);
+        if (!lines.length) {
+          content.innerHTML = '<div class="empty-state">No logs</div>';
+        } else {
+          content.innerHTML = renderLogLines(lines);
+        }
+      } catch (e) {
+        setWifiOnline(mac, false);
+        content.innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
+      }
+      renderWifiList();
+    }
+
     function escapeHtml(s) {
       const div = document.createElement('div');
       div.textContent = s;
       return div.innerHTML;
     }
 
+    function setupTabs() {
+      const tabR = document.getElementById('tab-robots');
+      const tabW = document.getElementById('tab-wifi');
+      const panelR = document.getElementById('panel-robots');
+      const panelW = document.getElementById('panel-wifi');
+      function show(tab) {
+        const isR = tab === 'robots';
+        tabR.classList.toggle('active', isR);
+        tabW.classList.toggle('active', !isR);
+        tabR.setAttribute('aria-selected', isR);
+        tabW.setAttribute('aria-selected', !isR);
+        panelR.classList.toggle('hidden', !isR);
+        panelW.classList.toggle('hidden', isR);
+      }
+      tabR.addEventListener('click', () => show('robots'));
+      tabW.addEventListener('click', () => show('wifi'));
+    }
+
     async function refresh() {
+      let parts = [];
+      let hasErr = false;
       try {
-        const macs = await fetchRobots();
+        const macs = await fetchRobotsList();
         robots = [...new Set(macs)];
         robotStatus = robots.reduce((acc, mac) => {
           if (!acc[mac]) acc[mac] = robotStatus[mac] || {};
@@ -523,10 +751,30 @@
           return acc;
         }, {});
         renderRobotList();
-        if (selectedMac) loadLogs(selectedMac);
+        parts.push('Robots: ' + robots.length);
       } catch (e) {
+        hasErr = true;
+        parts.push('Robots: error');
         document.getElementById('robot-list').innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
       }
+      try {
+        const w = await fetchWifiMacsList();
+        wifiDevices = [...new Set(w)];
+        wifiStatus = wifiDevices.reduce((acc, mac) => {
+          if (!acc[mac]) acc[mac] = wifiStatus[mac] || {};
+          if (Date.now() - (acc[mac].lastSeen || 0) > ONLINE_THRESHOLD_MS) acc[mac].online = false;
+          return acc;
+        }, {});
+        renderWifiList();
+        parts.push('Wi‑Fi: ' + wifiDevices.length);
+      } catch (e) {
+        hasErr = true;
+        parts.push('Wi‑Fi: error');
+        document.getElementById('wifi-list').innerHTML = `<div class="error-state">${escapeHtml(e.message)}</div>`;
+      }
+      setStatus(parts.join(' · '), hasErr);
+      if (selectedRobotMac) loadRobotLogs(selectedRobotMac);
+      else if (selectedWifiMac) loadWifiLogsPanel(selectedWifiMac);
       startCountdown();
     }
 
@@ -548,6 +796,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      setupTabs();
       setupControlButtons();
       startRefresh();
     });
