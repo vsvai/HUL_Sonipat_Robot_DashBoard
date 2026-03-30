@@ -669,7 +669,7 @@
         triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/backward/' + ms);
       });
       document.getElementById('btn-stop')?.addEventListener('click', () => {
-        triggerControl('/stop/' + encodeURIComponent(selectedRobotMac));
+        triggerControl('/stop/' + encodeURIComponent(selectedRobotMac) + '/set');
       });
       document.getElementById('btn-run-left')?.addEventListener('click', () => {
         triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/left');
