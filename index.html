@@ -279,7 +279,7 @@
       width: 100%;
       flex-basis: 100%;
     }
-    #move-duration-ms, #wifi-timer-sec {
+    #move-duration-ms, #move-lr-duration-ms, #wifi-timer-sec {
       width: 6.5rem;
       max-width: 100%;
       padding: 0.5rem 0.5rem;
@@ -315,7 +315,7 @@
         flex: 1 1 calc(50% - 0.25rem);
         min-width: calc(50% - 0.25rem);
       }
-      #move-duration-ms, #wifi-timer-sec {
+      #move-duration-ms, #move-lr-duration-ms, #wifi-timer-sec {
         width: 100%;
         flex: 1 1 100%;
       }
@@ -347,9 +347,12 @@
     <section class="section">
       <div class="section-header">Logs — <span id="selected-device-label">Select a robot or Wi‑Fi device</span></div>
       <div id="control-bar" class="control-bar">
-        <input type="number" id="move-duration-ms" min="1" step="100" value="1500" inputmode="numeric" title="Move duration (ms)" />
+        <input type="number" id="move-duration-ms" min="1" step="100" value="1500" inputmode="numeric" title="Forward / backward duration (ms)" />
         <button type="button" id="btn-move-forward" class="btn-move">Forward</button>
         <button type="button" id="btn-move-backward" class="btn-move">Backward</button>
+        <input type="number" id="move-lr-duration-ms" min="100" max="1000" step="10" value="500" inputmode="numeric" title="Left / right move: 100–1000 ms" />
+        <button type="button" id="btn-move-left" class="btn-move" title="/move/{MAC}/left/{ms}">Move left</button>
+        <button type="button" id="btn-move-right" class="btn-move" title="/move/{MAC}/right/{ms}">Move right</button>
         <button type="button" id="btn-stop" class="btn-stop">Stop</button>
         <button type="button" id="btn-run-left" class="btn-left">← Left</button>
         <button type="button" id="btn-run-right" class="btn-right">Right →</button>
@@ -608,6 +611,8 @@
         document.getElementById('btn-ota'),
         document.getElementById('btn-move-forward'),
         document.getElementById('btn-move-backward'),
+        document.getElementById('btn-move-left'),
+        document.getElementById('btn-move-right'),
         document.getElementById('btn-stop')
       ];
       buttons.forEach(b => { if (b) b.disabled = true; });
@@ -667,6 +672,22 @@
         const ms = getMoveMs();
         if (!ms) return showControlFeedback('Enter valid ms', true);
         triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/backward/' + ms);
+      });
+      const getLrMoveMs = () => {
+        const raw = document.getElementById('move-lr-duration-ms')?.value || '500';
+        const ms = parseInt(raw, 10);
+        if (!Number.isFinite(ms) || ms < 100 || ms > 1000) return null;
+        return ms;
+      };
+      document.getElementById('btn-move-left')?.addEventListener('click', () => {
+        const ms = getLrMoveMs();
+        if (ms == null) return showControlFeedback('Left/right: use 100–1000 ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/left/' + ms);
+      });
+      document.getElementById('btn-move-right')?.addEventListener('click', () => {
+        const ms = getLrMoveMs();
+        if (ms == null) return showControlFeedback('Left/right: use 100–1000 ms', true);
+        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/right/' + ms);
       });
       document.getElementById('btn-stop')?.addEventListener('click', () => {
         triggerControl('/stop/' + encodeURIComponent(selectedRobotMac) + '/set');
