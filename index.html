@@ -378,12 +378,8 @@
     const USE_LOCAL_PROXY = (location.hostname === 'localhost' || location.hostname === '127.0.0.1') && String(location.port || '') === '3000';
     const _origin = location.origin.replace(/\/$/, '');
     const API_BASE = USE_LOCAL_PROXY ? _origin + '/api' : REMOTE_API;
-    const API_BASE_CONTROL = USE_LOCAL_PROXY
-      ? _origin + '/api/api'
-      : (window.ROBOT_DASHBOARD_API_CONTROL || REMOTE_API + '/api').replace(/\/$/, '');
-    const API_BASE_WIFI_API = USE_LOCAL_PROXY
-      ? _origin + '/api/wifi_api'
-      : (window.WIFI_API_BASE || REMOTE_API + '/wifi_api').replace(/\/$/, '');
+    const API_BASE_CONTROL = (REMOTE_API + '/udp').replace(/\/$/, '');
+    const API_BASE_WIFI_API =(REMOTE_API + '/wifi_api').replace(/\/$/, '');
     const REFRESH_INTERVAL_MS = 10000;
     const ONLINE_THRESHOLD_MS = 120000;
     const FETCH_TIMEOUT_MS = 15000;
@@ -666,12 +662,12 @@
       document.getElementById('btn-move-forward')?.addEventListener('click', () => {
         const ms = getMoveMs();
         if (!ms) return showControlFeedback('Enter valid ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/forward/' + ms);
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/forward/');
       });
       document.getElementById('btn-move-backward')?.addEventListener('click', () => {
         const ms = getMoveMs();
         if (!ms) return showControlFeedback('Enter valid ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/backward/' + ms);
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/backward/');
       });
       const getLrMoveMs = () => {
         const raw = document.getElementById('move-lr-duration-ms')?.value || '500';
@@ -682,21 +678,21 @@
       document.getElementById('btn-move-left')?.addEventListener('click', () => {
         const ms = getLrMoveMs();
         if (ms == null) return showControlFeedback('Left/right: use 100–1000 ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/left/' + ms);
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/left/');
       });
       document.getElementById('btn-move-right')?.addEventListener('click', () => {
         const ms = getLrMoveMs();
         if (ms == null) return showControlFeedback('Left/right: use 100–1000 ms', true);
-        triggerControl('/move/' + encodeURIComponent(selectedRobotMac) + '/right/' + ms);
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/right/');
       });
       document.getElementById('btn-stop')?.addEventListener('click', () => {
         triggerControl('/stop/' + encodeURIComponent(selectedRobotMac) + '/set');
       });
       document.getElementById('btn-run-left')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/left');
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/go_forward');
       });
       document.getElementById('btn-run-right')?.addEventListener('click', () => {
-        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/right');
+        triggerControl('/start/' + encodeURIComponent(selectedRobotMac) + '/set/go_backward');
       });
       document.getElementById('btn-ota')?.addEventListener('click', () => {
         triggerControl('/ota/' + encodeURIComponent(selectedRobotMac) + '/set');
